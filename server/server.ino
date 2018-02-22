@@ -76,14 +76,16 @@ int getFreeSram()
     }
 // Force Progmem storage of static_str and retrieve to buff. Implementation is different for Teensy
 #if defined(TEENSYDUINO)
-#define STRNCPY_F(buff, static_str, size)         \
-    {                                             \
-        strncpy_PF((buff), (static_str), (size)); \
+#define STRNCPY_F(buff, static_str, size)      \
+    {                                          \
+        strncpy((buff), (static_str), (size)); \
     }
 #else
-#define STRNCPY_F(buff, static_str, size)          \
-    {                                              \
-        strncpy_PF((buff), F(static_str), (size)); \
+#define STRNCPY_F(buff, static_str, size)         \
+    /* TODO: figure out why this causes */        \
+    /* so many errors scrncpy_PF? */              \
+    {                                             \
+        strncpy_P((buff), F(static_str), (size)); \
     }
 #endif
 
