@@ -14,10 +14,6 @@ extern void *__brkval;
 // TODO: define MAX_PIN in board_properties.h
 #define VALID_PIN(pin) ((pin) > 0)
 
-// #TODO: deprecate MAX_PIXELS
-// Assuming we can fill half of SRAM with CRGB pixels
-#define MAX_PIXELS (int)(SRAM_SIZE / (2 * sizeof(CRGB)))
-
 // Length of output buffer
 #define BUFFLEN 256
 
@@ -121,24 +117,18 @@ int getFreeSram()
         return 0;                                                                                                                    \
     }                                                                                                                                \
     SER_SNPRINTF_OUT_PF("; initializing PANEL_%02d, data_pin: %d, clk_pin: %d, len: %d", panel_count, (data_pin), (clk_pin), (len)); \
+    panel_info[panel_count] = (len);                                                                                                 \
     pixel_count += (len);                                                                                                            \
-    if (pixel_count > MAX_PIXELS)                                                                                                    \
-    {                                                                                                                                \
-        SNPRINTF_OUT_PF("pixel count %d exceeds MAX_PIXELS %d in PANEL_%02d", pixel_count, MAX_PIXELS, panel_count);                 \
-        return 10;                                                                                                                   \
-    }                                                                                                                                \
     panels[panel_count] = (CRGB *)malloc((len) * sizeof(CRGB));                                                                      \
     if (!panels[panel_count])                                                                                                        \
     {                                                                                                                                \
         SNPRINTF_OUT_PF("malloc failed for PANEL_%02d", panel_count);                                                                \
         return 11;                                                                                                                   \
-    }                                                                                                                                \
-    panel_info[panel_count] = (len);
+    }
 
 void stop()
 {
-    while (1)
-        ;
+    while (1) {};
 }
 
 int init_panels()
@@ -202,11 +192,6 @@ void setup()
         {
             error_code = 10;
             SNPRINTF_OUT_PF("pixel_count is %d. No pixels defined. Exiting", pixel_count);
-        }
-        else if (pixel_count > MAX_PIXELS)
-        {
-            error_code = 10;
-            SNPRINTF_OUT_PF("MAX_PIXELS is %d but pixel_count is %d. Not enough memory. Exiting", MAX_PIXELS, pixel_count);
         }
     }
     if (error_code)
