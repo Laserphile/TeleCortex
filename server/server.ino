@@ -126,6 +126,13 @@ int getFreeSram()
         return 11;                                                                                                                   \
     }
 
+void blink()
+{
+    digitalWrite(STATUS_PIN , HIGH);   // turn the LED on (HIGH is the voltage level)
+    delay(1000);               // wait for a second
+    digitalWrite(STATUS_PIN , LOW);    // turn the LED off by making the voltage LOW
+}
+
 void stop()
 {
     while (1) {};
@@ -173,6 +180,7 @@ int init_panels()
 void setup()
 {
     // initialize serial
+    blink();
     SERIAL_OBJ.begin(SERIAL_BAUD);
 
     SER_SNPRINTF_OUT("\n");
@@ -222,6 +230,7 @@ int hue = 0;
 
 void loop()
 {
+    blink();
     for (int i = 0; i < 255; i++)
     {
         for (int p = 0; p < panel_count; p++)
