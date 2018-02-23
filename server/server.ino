@@ -106,7 +106,7 @@ static char err_buffer[BUFFLEN_ERR];
 #define DEBUG 1
 
 // Current error code
-int error_code = 0;
+static int error_code = 0;
 
 int getFreeSram()
 {
@@ -144,13 +144,13 @@ void stop()
  */
 
 // The number of panels, determined by defines, calculated in setup()
-int panel_count;
+static int panel_count;
 
 // The length of each panel
-int panel_info[MAX_PANELS];
+static int panel_info[MAX_PANELS];
 
 // the total number of pixels used by panels, determined by defines
-int pixel_count;
+static int pixel_count;
 
 // An array of arrays of pixels, populated in setup()
 CRGB **panels = 0;
@@ -264,11 +264,11 @@ inline int current_queue_len() {
  * Increment the read index
  */
 inline void advance_read_queue() {
-    cmd_queue_index_r = (cmd_queue_index_r++) % MAX_QUEUE_LEN;
+    cmd_queue_index_r = (cmd_queue_index_r+1) % MAX_QUEUE_LEN;
 }
 
 inline void advance_write_queue() {
-    cmd_queue_index_w = (cmd_queue_index_w++) % MAX_QUEUE_LEN;
+    cmd_queue_index_w = (cmd_queue_index_w+1) % MAX_QUEUE_LEN;
 }
 
 inline bool enqueue_command(const char* cmd) {
@@ -276,6 +276,12 @@ inline bool enqueue_command(const char* cmd) {
         return false;
     strncpy(command_queue[cmd_queue_index_w], cmd, MAX_CMD_SIZE);
     advance_write_queue();
+    if (DEBUG)
+    {
+        SER_SNPRINTF_COMMENT_PSTR("Enqueued command: '%s'", cmd);
+        SER_SNPRINTF_COMMENT_PSTR("cmd_queue_index_w: %d", cmd_queue_index_w);
+        SER_SNPRINTF_COMMENT_PSTR("current_queue_len: %d", current_queue_len());
+    }
     return true;
 }
 
@@ -290,18 +296,24 @@ void get_serial_commands()
 
     // TODO: watch for idle serial, might indicate that an "OK" response was missed by client. Send "IDLE".
 
-    // The result returned from SERIAL_OBJ.read()
-    int serial_result;
     // The character currently being read from serial
     char serial_char;
     // The index of the character in the line being read from serial.
     int serial_count = 0;
 
-    while ((current_queue_len() < MAX_QUEUE_LEN) && (serial_result = SERIAL_OBJ.read() >= 0))
+    while ((current_queue_len() < MAX_QUEUE_LEN) && (SERIAL_OBJ.available() > 0))
     {
-        serial_char = (char)serial_result;
+        serial_char = SERIAL_OBJ.read();
+        if (DEBUG)
+        {
+            SER_SNPRINTF_COMMENT_PSTR("serial char is: %c (%02x)", serial_char, serial_char);
+        }
         if (CHAR_IS_EOL(serial_char))
         {
+            if (DEBUG)
+            {
+                SER_SNPRINT_COMMENT_PSTR("serial char is EOL");
+            }
             serial_comment_mode = false; // end of line == end of comment
 
             if (!serial_count)
@@ -321,15 +333,23 @@ void get_serial_commands()
         }
         else if (serial_count >= MAX_CMD_SIZE - 1)
         {
+            if (DEBUG)
+            {
+                SER_SNPRINTF_COMMENT_PSTR("serial count %d is larger than MAX_CMD_SIZE: %d, ignore", serial_count, MAX_CMD_SIZE);
+            }
             // Keep fetching, but ignore normal characters beyond the max length
             // The command will be injected when EOL is reached
         }
         else if (serial_char == '\\')
         { // Handle escapes
-            if ((serial_result = SERIAL_OBJ.read()) >= 0)
+            if (DEBUG)
+            {
+                SER_SNPRINT_COMMENT_PSTR("serial char is escape");
+            }
+            if (SERIAL_OBJ.available() > 0)
             {
                 // if we have one more character, copy it over
-                serial_char = serial_result;
+                serial_char = SERIAL_OBJ.read();
                 if (!serial_comment_mode)
                     serial_line_buffer[serial_count++] = serial_char;
             }
@@ -337,6 +357,10 @@ void get_serial_commands()
         }
         else
         {
+            if (DEBUG)
+            {
+                SER_SNPRINT_COMMENT_PSTR("serial char is regular");
+            }
             // it's not a newline, carriage return or escape char
             if (serial_char == ';')
                 serial_comment_mode = true;
@@ -360,16 +384,14 @@ void get_available_commands()
 
 int process_next_command()
 {
-    // TODO: This
     return 0;
 }
 
-    /**
+/**
  * Main
  * Req: *
  */
-    void
-    setup()
+void setup()
 {
     // initialize serial
     if (DEBUG)
@@ -446,7 +468,7 @@ void loop()
     }
 
     int hue = 0;
-    for (int i = 0; i < 255; i++)
+    for (int i = 0; i < 255; i+=10)
     {
         for (int p = 0; p < panel_count; p++)
         {
@@ -461,12 +483,18 @@ void loop()
     if (DEBUG)
     {
         SER_SNPRINTF_COMMENT_PSTR("Free SRAM %d", getFreeSram());
+        SER_SNPRINTF_COMMENT_PSTR("current_queue_len %d", current_queue_len());
+        SER_SNPRINTF_COMMENT_PSTR("cmd_queue_index_r %d", cmd_queue_index_r);
+        SER_SNPRINTF_COMMENT_PSTR("cmd_queue_index_w %d", cmd_queue_index_w);
     }
 
     if (current_queue_len() < MAX_QUEUE_LEN) {
         get_available_commands();
     }
     if (current_queue_len()){
+        if (DEBUG) {
+            SER_SNPRINTF_COMMENT_PSTR("Next command: '%s'", command_queue[cmd_queue_index_r]);
+        }
         error_code = process_next_command();
         if (error_code)
         {
