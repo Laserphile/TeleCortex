@@ -291,9 +291,9 @@ inline bool enqueue_command(const char* cmd) {
     advance_write_queue();
     if (DEBUG)
     {
-        SER_SNPRINTF_COMMENT_PSTR("Enqueued command: '%s'", cmd);
-        SER_SNPRINTF_COMMENT_PSTR("cmd_queue_index_w: %d", cmd_queue_index_w);
-        SER_SNPRINTF_COMMENT_PSTR("current_queue_len: %d", current_queue_len());
+        SER_SNPRINTF_COMMENT_PSTR("ENQ: Enqueued command: '%s'", cmd);
+        SER_SNPRINTF_COMMENT_PSTR("ENQ: cmd_queue_index_w: %d", cmd_queue_index_w);
+        SER_SNPRINTF_COMMENT_PSTR("ENQ: current_queue_len: %d", current_queue_len());
     }
     return true;
 }
@@ -319,13 +319,13 @@ void get_serial_commands()
         serial_char = SERIAL_OBJ.read();
         if (DEBUG)
         {
-            SER_SNPRINTF_COMMENT_PSTR("serial char is: %c (%02x)", serial_char, serial_char);
+            SER_SNPRINTF_COMMENT_PSTR("GSC: serial char is: %c (%02x)", serial_char, serial_char);
         }
         if (CHAR_IS_EOL(serial_char))
         {
             if (DEBUG)
             {
-                SER_SNPRINT_COMMENT_PSTR("serial char is EOL");
+                SER_SNPRINT_COMMENT_PSTR("GSC: serial char is EOL");
             }
             serial_comment_mode = false; // end of line == end of comment
 
@@ -346,19 +346,13 @@ void get_serial_commands()
         }
         else if (serial_count >= MAX_CMD_SIZE - 1)
         {
-            if (DEBUG)
-            {
-                SER_SNPRINTF_COMMENT_PSTR("serial count %d is larger than MAX_CMD_SIZE: %d, ignore", serial_count, MAX_CMD_SIZE);
-            }
+            if (DEBUG) { SER_SNPRINTF_COMMENT_PSTR("GSC: serial count %d is larger than MAX_CMD_SIZE: %d, ignore", serial_count, MAX_CMD_SIZE); }
             // Keep fetching, but ignore normal characters beyond the max length
             // The command will be injected when EOL is reached
         }
         else if (serial_char == '\\')
         { // Handle escapes
-            if (DEBUG)
-            {
-                SER_SNPRINT_COMMENT_PSTR("serial char is escape");
-            }
+            if (DEBUG) { SER_SNPRINT_COMMENT_PSTR("GSC: serial char is escape"); }
             if (SERIAL_OBJ.available() > 0)
             {
                 // if we have one more character, copy it over
@@ -370,10 +364,7 @@ void get_serial_commands()
         }
         else
         {
-            if (DEBUG)
-            {
-                SER_SNPRINT_COMMENT_PSTR("serial char is regular");
-            }
+            if (DEBUG) { SER_SNPRINT_COMMENT_PSTR("GSC: serial char is regular"); }
             // it's not a newline, carriage return or escape char
             if (serial_char == ';')
                 serial_comment_mode = true;
@@ -416,9 +407,9 @@ void setup()
     SER_SNPRINTF_MSG("\n");
     if (DEBUG)
     {
-        SER_SNPRINTF_COMMENT_PSTR("detected board: %s", DETECTED_BOARD);
-        SER_SNPRINTF_COMMENT_PSTR("sram size: %d", SRAM_SIZE);
-        SER_SNPRINTF_COMMENT_PSTR("Free SRAM %d", getFreeSram());
+        SER_SNPRINTF_COMMENT_PSTR("SET: detected board: %s", DETECTED_BOARD);
+        SER_SNPRINTF_COMMENT_PSTR("SET: sram size: %d", SRAM_SIZE);
+        SER_SNPRINTF_COMMENT_PSTR("SET: Free SRAM %d", getFreeSram());
     }
 
     // Clear out buffer
@@ -449,11 +440,11 @@ void setup()
 
     if (DEBUG)
     {
-        SER_SNPRINTF_COMMENT_PSTR("pixel_count: %d, panel_count: %d", pixel_count, panel_count);
+        SER_SNPRINTF_COMMENT_PSTR("SET: pixel_count: %d, panel_count: %d", pixel_count, panel_count);
 
         for (int p = 0; p < panel_count; p++)
         {
-            SER_SNPRINTF_COMMENT_PSTR("-> panel %d len %d", p, panel_info[p]);
+            SER_SNPRINTF_COMMENT_PSTR("SET: -> panel %d len %d", p, panel_info[p]);
         }
     }
 
@@ -495,10 +486,10 @@ void loop()
     }
     if (DEBUG)
     {
-        SER_SNPRINTF_COMMENT_PSTR("Free SRAM %d", getFreeSram());
-        SER_SNPRINTF_COMMENT_PSTR("current_queue_len %d", current_queue_len());
-        SER_SNPRINTF_COMMENT_PSTR("cmd_queue_index_r %d", cmd_queue_index_r);
-        SER_SNPRINTF_COMMENT_PSTR("cmd_queue_index_w %d", cmd_queue_index_w);
+        SER_SNPRINTF_COMMENT_PSTR("LOO: Free SRAM %d", getFreeSram());
+        SER_SNPRINTF_COMMENT_PSTR("LOO: current_queue_len %d", current_queue_len());
+        SER_SNPRINTF_COMMENT_PSTR("LOO: cmd_queue_index_r %d", cmd_queue_index_r);
+        SER_SNPRINTF_COMMENT_PSTR("LOO: cmd_queue_index_w %d", cmd_queue_index_w);
     }
 
     if (current_queue_len() < MAX_QUEUE_LEN) {
@@ -506,7 +497,7 @@ void loop()
     }
     if (current_queue_len()){
         if (DEBUG) {
-            SER_SNPRINTF_COMMENT_PSTR("Next command: '%s'", command_queue[cmd_queue_index_r]);
+            SER_SNPRINTF_COMMENT_PSTR("LOO: Next command: '%s'", command_queue[cmd_queue_index_r]);
         }
         error_code = process_next_command();
         if (error_code)
