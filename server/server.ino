@@ -26,13 +26,13 @@ extern void *__brkval;
 #define BUFFLEN_FMT 128
 
 // Serial out Buffer
-char msg_buffer[BUFFLEN_MSG];
+static char msg_buffer[BUFFLEN_MSG];
 
 // Format string buffer. Temporarily store a format string from PROGMEM.
-char fmt_buffer[BUFFLEN_MSG];
+static char fmt_buffer[BUFFLEN_MSG];
 
 // Buffer to store the error header
-char err_buffer[BUFFLEN_ERR];
+static char err_buffer[BUFFLEN_ERR];
 
 // Might use bluetooth Serial later.
 #define SERIAL_OBJ Serial
@@ -60,30 +60,44 @@ char err_buffer[BUFFLEN_ERR];
 
 // Force Progmem storage of static_str and retrieve to buff. Implementation is different for Teensy
 #if defined(TEENSYDUINO)
-#define STRNCPY_PRGM(buff, static_str, size) \
+#define STRNCPY_PSTR(buff, static_str, size) \
     strncpy((buff), (static_str), (size));
 #else
-#define STRNCPY_PRGM(buff, static_str, size) \
+#define STRNCPY_PSTR(buff, static_str, size) \
     /* TODO: figure out why this causes */   \
     /* so many errors */                     \
     strncpy_P((buff), PSTR(static_str), (size));
 #endif
 
 // copy fmt string from progmem to fmt_buffer, snprintf to output buffer
-#define SNPRINTF_MSG_PRGM(fmt_str, ...)              \
-    STRNCPY_PRGM(fmt_buffer, fmt_str, BUFFLEN_FMT); \
+#define SNPRINTF_MSG_PSTR(fmt_str, ...)              \
+    STRNCPY_PSTR(fmt_buffer, fmt_str, BUFFLEN_FMT); \
     SNPRINTF_MSG(fmt_buffer, __VA_ARGS__);
 
+// Print a progmem-stored comment
+#define SER_SNPRINT_COMMENT_PSTR(comment) \
+    *msg_buffer = COMMENT_START_CHAR;     \
+    STRNCPY_PSTR(msg_buffer + 1, comment, BUFFLEN_MSG - 1);
+
 // copy fmt string from progmem to fmt_buffer, snptintf to output buffer then println to serial
-#define SER_SNPRINTF_MSG_PRGM(fmt_str, ...)          \
-    STRNCPY_PRGM(fmt_buffer, fmt_str, BUFFLEN_FMT); \
+#define SER_SNPRINTF_MSG_PSTR(fmt_str, ...)          \
+    STRNCPY_PSTR(fmt_buffer, fmt_str, BUFFLEN_FMT); \
+    SER_SNPRINTF_MSG(fmt_buffer, __VA_ARGS__);
+
+// copy fmt string from progmem to fmt_buffer, snptintf to output buffer as a comment then println to serial
+#define SER_SNPRINTF_COMMENT_PSTR(fmt_str, ...)     \
+    *fmt_buffer = COMMENT_START_CHAR; \
+    STRNCPY_PSTR(fmt_buffer+1, fmt_str, BUFFLEN_FMT-1); \
     SER_SNPRINTF_MSG(fmt_buffer, __VA_ARGS__);
 
 // copy fmt string from progmem to fmt_buffer, snptintf to output buffer then println to serial
-#define SER_SNPRINTF_ERR_PRGM(fmt_str, ...)        \
-    STRNCPY_PRGM(fmt_buffer, fmt_str, BUFFLEN_ERR); \
+#define SER_SNPRINTF_ERR_PSTR(fmt_str, ...)        \
+    STRNCPY_PSTR(fmt_buffer, fmt_str, BUFFLEN_ERR); \
     SER_SNPRINTF_ERR(fmt_buffer, __VA_ARGS__);
 
+#define CHAR_IS_EOL(c) ((c == '\n') || (c == '\r'))
+#define CHAR_IS_SPACE(c) ((c == ' ') || (c == '\t') || (c == '\v') || (c == '\f') || (c == '\n') || (c == '\r'))
+#define COMMENT_START_CHAR ';'
 /**
  * Debug
  * Req: Serial
@@ -106,7 +120,7 @@ int getFreeSram()
 };
 
 void print_error(int error_code, char* message) {
-    SER_SNPRINTF_ERR_PRGM("E%03d:", error_code);
+    SER_SNPRINTF_ERR_PSTR("E%03d:", error_code);
     SERIAL_OBJ.println(message);
 }
 
@@ -149,21 +163,21 @@ CRGB **panels = 0;
  * first undefined panel.
  */
 
-#define INIT_PANEL(data_pin, clk_pin, len)                                                                                           \
-    SER_SNPRINTF_MSG_PRGM("; Free SRAM %d", getFreeSram());                                                                            \
-    if (!VALID_PIN((data_pin)) || (len) <= 0)                                                                                        \
-    {                                                                                                                                \
-        SER_SNPRINTF_MSG_PRGM("; PANEL_%02d not configured", panel_count);                                                             \
-        return 0;                                                                                                                    \
-    }                                                                                                                                \
-    SER_SNPRINTF_MSG_PRGM("; initializing PANEL_%02d, data_pin: %d, clk_pin: %d, len: %d", panel_count, (data_pin), (clk_pin), (len)); \
-    panel_info[panel_count] = (len);                                                                                                 \
-    pixel_count += (len);                                                                                                            \
-    panels[panel_count] = (CRGB *)malloc((len) * sizeof(CRGB));                                                                      \
-    if (!panels[panel_count])                                                                                                        \
-    {                                                                                                                                \
-        SNPRINTF_MSG_PRGM("malloc failed for PANEL_%02d", panel_count);                                                                \
-        return 11;                                                                                                                   \
+#define INIT_PANEL(data_pin, clk_pin, len)                                                                                               \
+    SER_SNPRINTF_COMMENT_PSTR("Free SRAM %d", getFreeSram());                                                                            \
+    if (!VALID_PIN((data_pin)) || (len) <= 0)                                                                                            \
+    {                                                                                                                                    \
+        SER_SNPRINTF_COMMENT_PSTR("PANEL_%02d not configured", panel_count);                                                           \
+        return 0;                                                                                                                        \
+    }                                                                                                                                    \
+    SER_SNPRINTF_COMMENT_PSTR("initializing PANEL_%02d, data_pin: %d, clk_pin: %d, len: %d", panel_count, (data_pin), (clk_pin), (len)); \
+    panel_info[panel_count] = (len);                                                                                                     \
+    pixel_count += (len);                                                                                                                \
+    panels[panel_count] = (CRGB *)malloc((len) * sizeof(CRGB));                                                                          \
+    if (!panels[panel_count])                                                                                                            \
+    {                                                                                                                                    \
+        SNPRINTF_MSG_PSTR("malloc failed for PANEL_%02d", panel_count);                                                                  \
+        return 11;                                                                                                                       \
     }
 
 int init_panels()
@@ -267,7 +281,7 @@ int process_next_command() {
     return 0;
 }
 
-/**
+    /**
  * Main
  * Req: *
  */
@@ -284,9 +298,9 @@ int process_next_command() {
     SER_SNPRINTF_MSG("\n");
     if (DEBUG)
     {
-        SER_SNPRINTF_MSG_PRGM("; detected board: %s", DETECTED_BOARD);
-        SER_SNPRINTF_MSG_PRGM("; sram size: %d", SRAM_SIZE);
-        SER_SNPRINTF_MSG_PRGM("; Free SRAM %d", getFreeSram());
+        SER_SNPRINTF_COMMENT_PSTR("detected board: %s", DETECTED_BOARD);
+        SER_SNPRINTF_COMMENT_PSTR("sram size: %d", SRAM_SIZE);
+        SER_SNPRINTF_COMMENT_PSTR("Free SRAM %d", getFreeSram());
     }
 
     // Clear out buffer
@@ -300,7 +314,7 @@ int process_next_command() {
         if (pixel_count <= 0)
         {
             error_code = 10;
-            SNPRINTF_MSG_PRGM("pixel_count is %d. No pixels defined. Exiting", pixel_count);
+            SNPRINTF_MSG_PSTR("pixel_count is %d. No pixels defined. Exiting", pixel_count);
         }
     }
     if (error_code)
@@ -312,16 +326,16 @@ int process_next_command() {
     }
     else
     {
-        SER_SNPRINTF_MSG("; Panel Setup: OK");
+        SER_SNPRINT_COMMENT_PSTR("Panel Setup: OK");
     }
 
     if (DEBUG)
     {
-        SER_SNPRINTF_MSG_PRGM("; pixel_count: %d, panel_count: %d", pixel_count, panel_count);
+        SER_SNPRINTF_COMMENT_PSTR("pixel_count: %d, panel_count: %d", pixel_count, panel_count);
 
         for (int p = 0; p < panel_count; p++)
         {
-            SER_SNPRINTF_MSG_PRGM("; -> panel %d len %d", p, panel_info[p]);
+            SER_SNPRINTF_COMMENT_PSTR("-> panel %d len %d", p, panel_info[p]);
         }
     }
 
@@ -335,12 +349,11 @@ int process_next_command() {
     }
     else
     {
-        SER_SNPRINTF_MSG("; Queue Setup: OK");
+        SER_SNPRINT_COMMENT_PSTR("Queue Setup: OK");
     }
 }
 
 // temporarily store the hue value calculated
-int hue = 0;
 
 void loop()
 {
@@ -349,6 +362,7 @@ void loop()
         blink();
     }
 
+    int hue = 0;
     for (int i = 0; i < 255; i++)
     {
         for (int p = 0; p < panel_count; p++)
@@ -363,7 +377,7 @@ void loop()
     }
     if (DEBUG)
     {
-        SER_SNPRINTF_MSG("; Free SRAM %d", getFreeSram());
+        SER_SNPRINTF_COMMENT_PSTR("Free SRAM %d", getFreeSram());
     }
 
     if (current_queue_len() < MAX_QUEUE_LEN) {
@@ -378,6 +392,6 @@ void loop()
             // In the case of an error, stop execution
             stop();
         }
-        advance_queue();
+        advance_read_queue();
     }
 }
