@@ -244,6 +244,7 @@ int init_panels()
 static uint8_t cmd_queue_index_r = 0, // Ring buffer read position
     cmd_queue_index_w = 0;            // Ring buffer write position
 char command_queue[MAX_QUEUE_LEN][MAX_CMD_SIZE];
+bool queue_full = false;
 
 /**
  * Init Queue
@@ -257,7 +258,12 @@ int init_queue(){
  * Get current number of commands in queue from read and write indices
  */
 inline int current_queue_len() {
-    return (cmd_queue_index_w - cmd_queue_index_r) % MAX_QUEUE_LEN;
+    if(queue_full) {
+        return MAX_QUEUE_LEN;
+    } else {
+        // we want modulo, not remainder
+        return (cmd_queue_index_w - cmd_queue_index_r + MAX_QUEUE_LEN) % MAX_QUEUE_LEN;
+    }
 }
 
 /**
@@ -265,11 +271,17 @@ inline int current_queue_len() {
  * Increment the read index
  */
 inline void advance_read_queue() {
+    if( cmd_queue_index_w == cmd_queue_index_r){
+        queue_full = false;
+    }
     cmd_queue_index_r = (cmd_queue_index_r+1) % MAX_QUEUE_LEN;
 }
 
 inline void advance_write_queue() {
     cmd_queue_index_w = (cmd_queue_index_w+1) % MAX_QUEUE_LEN;
+    if(cmd_queue_index_w == cmd_queue_index_r){
+        queue_full = true;
+    }
 }
 
 inline bool enqueue_command(const char* cmd) {
