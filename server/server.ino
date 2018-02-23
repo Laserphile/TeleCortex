@@ -255,7 +255,7 @@ int init_queue(){
 /**
  * Get current number of commands in queue from read and write indices
  */
-int current_queue_len() {
+inline int current_queue_len() {
     return (cmd_queue_index_w - cmd_queue_index_r) % MAX_QUEUE_LEN;
 }
 
@@ -263,20 +263,103 @@ int current_queue_len() {
  * Advance queue
  * Increment the read index
  */
-void advance_queue() {
+inline void advance_read_queue() {
     cmd_queue_index_r = (cmd_queue_index_r++) % MAX_QUEUE_LEN;
 }
 
+inline void advance_write_queue() {
+    cmd_queue_index_w = (cmd_queue_index_w++) % MAX_QUEUE_LEN;
+}
+
+inline bool enqueue_command(const char* cmd) {
+    if (*cmd == ';' || current_queue_len() >= MAX_QUEUE_LEN)
+        return false;
+    strncpy(command_queue[cmd_queue_index_w], cmd, MAX_CMD_SIZE);
+    advance_write_queue();
+    return true;
+}
+
+/**
+ * Get Serial Commands
+ * Inspired by Marlin/Marlin_main::get_serial_commands();
+ */
+void get_serial_commands()
+{
+    static char serial_line_buffer[MAX_CMD_SIZE];
+    static bool serial_comment_mode = false;
+
+    // TODO: watch for idle serial, might indicate that an "OK" response was missed by client. Send "IDLE".
+
+    // The result returned from SERIAL_OBJ.read()
+    int serial_result;
+    // The character currently being read from serial
+    char serial_char;
+    // The index of the character in the line being read from serial.
+    int serial_count = 0;
+
+    while ((current_queue_len() < MAX_QUEUE_LEN) && (serial_result = SERIAL_OBJ.read() >= 0))
+    {
+        serial_char = (char)serial_result;
+        if (CHAR_IS_EOL(serial_char))
+        {
+            serial_comment_mode = false; // end of line == end of comment
+
+            if (!serial_count)
+                continue; // Skip empty lines
+
+            serial_line_buffer[serial_count] = 0; // Terminate string
+            serial_count = 0;                     // Reset buffer
+
+            char *command = serial_line_buffer;
+
+            while (CHAR_IS_SPACE(*command))
+                command++; // Skip leading spaces
+
+            // TODO: is it better to preprocess the command / calculate checksum here or later?
+
+            enqueue_command(command);
+        }
+        else if (serial_count >= MAX_CMD_SIZE - 1)
+        {
+            // Keep fetching, but ignore normal characters beyond the max length
+            // The command will be injected when EOL is reached
+        }
+        else if (serial_char == '\\')
+        { // Handle escapes
+            if ((serial_result = SERIAL_OBJ.read()) >= 0)
+            {
+                // if we have one more character, copy it over
+                serial_char = serial_result;
+                if (!serial_comment_mode)
+                    serial_line_buffer[serial_count++] = serial_char;
+            }
+            // otherwise do nothing
+        }
+        else
+        {
+            // it's not a newline, carriage return or escape char
+            if (serial_char == ';')
+                serial_comment_mode = true;
+            // So we can write it to the serial_line_buffer
+            if (!serial_comment_mode)
+                serial_line_buffer[serial_count++] = serial_char;
+        }
+    }
+}
 
 /**
  * Get Available commands
- * Fills queue with commands from possible command sources.
+ * Fills queue with commands from any command sources.
+ * Inspired by Marlin/Marlin_main::get_available_commands();]
  */
-void get_available_commands() {
-    // TODO: This
+void get_available_commands()
+{
+    get_serial_commands();
+    // TODO: read commands off SD card
 }
 
-int process_next_command() {
+int process_next_command()
+{
     // TODO: This
     return 0;
 }
