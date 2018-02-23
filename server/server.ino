@@ -427,6 +427,9 @@ void get_serial_commands()
             if(error_code)
             {
                 print_error(error_code, msg_buffer);
+                if(DEBUG) {
+                    SER_SNPRINTF_COMMENT_PSTR("GSC: Previous command: %s", serial_line_buffer);
+                }
                 flush_serial_queue_resend();
                 error_code = 0;
                 return;
