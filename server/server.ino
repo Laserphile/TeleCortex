@@ -77,7 +77,8 @@ static char err_buffer[BUFFLEN_ERR];
 // Print a progmem-stored comment
 #define SER_SNPRINT_COMMENT_PSTR(comment) \
     *msg_buffer = COMMENT_START_CHAR;     \
-    STRNCPY_PSTR(msg_buffer + 1, comment, BUFFLEN_MSG - 1);
+    STRNCPY_PSTR(msg_buffer + 1, comment, BUFFLEN_MSG - 1);\
+    SERIAL_OBJ.println(msg_buffer);
 
 // copy fmt string from progmem to fmt_buffer, snptintf to output buffer then println to serial
 #define SER_SNPRINTF_MSG_PSTR(fmt_str, ...)          \
