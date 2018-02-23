@@ -53,10 +53,10 @@ static char err_buffer[BUFFLEN_ERR];
     SNPRINTF_MSG(__VA_ARGS__);      \
     SERIAL_OBJ.println(msg_buffer);
 
-// snprintf to error buffer then println to serial
+// snprintf to error buffer then print to serial
 #define SER_SNPRINTF_ERR(...)  \
     SNPRINTF_ERR(__VA_ARGS__); \
-    SERIAL_OBJ.println(err_buffer);
+    SERIAL_OBJ.print(err_buffer);
 
 // Force Progmem storage of static_str and retrieve to buff. Implementation is different for Teensy
 #if defined(TEENSYDUINO)
@@ -276,7 +276,7 @@ inline int queue_length() {
 void queue_clear()
 {
     cmd_queue_index_r = cmd_queue_index_w;
-    queue_full
+    queue_full = false;
 }
 
 /**
