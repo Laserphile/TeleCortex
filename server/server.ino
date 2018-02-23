@@ -76,7 +76,7 @@ static char err_buffer[BUFFLEN_ERR];
 
 // Print a progmem-stored comment
 #define SER_SNPRINT_COMMENT_PSTR(comment) \
-    *msg_buffer = COMMENT_START_CHAR;     \
+    *msg_buffer = COMMENT_PREFIX;     \
     STRNCPY_PSTR(msg_buffer + 1, comment, BUFFLEN_MSG - 1);\
     SERIAL_OBJ.println(msg_buffer);
 
@@ -87,24 +87,30 @@ static char err_buffer[BUFFLEN_ERR];
 
 // copy fmt string from progmem to fmt_buffer, snptintf to output buffer as a comment then println to serial
 #define SER_SNPRINTF_COMMENT_PSTR(fmt_str, ...)     \
-    *fmt_buffer = COMMENT_START_CHAR; \
+    *fmt_buffer = COMMENT_PREFIX; \
     STRNCPY_PSTR(fmt_buffer+1, fmt_str, BUFFLEN_FMT-1); \
     SER_SNPRINTF_MSG(fmt_buffer, __VA_ARGS__);
 
-// copy fmt string from progmem to fmt_buffer, snptintf to output buffer then println to serial
-#define SER_SNPRINTF_ERR_PSTR(fmt_str, ...)        \
-    STRNCPY_PSTR(fmt_buffer, fmt_str, BUFFLEN_ERR); \
+// copy fmt string from progmem to fmt_buffer, snptintf to error buffer then println to serial
+#define SER_SNPRINTF_ERR_PSTR(fmt_str, ...)         \
+    STRNCPY_PSTR(fmt_buffer, fmt_str, BUFFLEN_FMT); \
     SER_SNPRINTF_ERR(fmt_buffer, __VA_ARGS__);
 
 #define CHAR_IS_EOL(c) ((c == '\n') || (c == '\r'))
 #define CHAR_IS_SPACE(c) ((c == ' ') || (c == '\t') || (c == '\v') || (c == '\f') || (c == '\n') || (c == '\r'))
-#define COMMENT_START_CHAR ';'
+#define COMMENT_PREFIX ';'
+#define ESCAPE_PREFIX '\\'
+#define LINENO_PREFIX 'N'
+#define CHECKSUM_PREFIX '*'
 /**
  * Debug
  * Req: Serial
  */
 
 #define DEBUG 1
+#if DEBUG
+#define NO_REQUIRE_CHECKSUM 1
+#endif
 
 // Current error code
 static int error_code = 0;
@@ -134,9 +140,7 @@ void blink()
 
 void stop()
 {
-    while (1)
-    {
-    };
+    while (1) { };
 }
 
 /**
@@ -178,7 +182,7 @@ CRGB **panels = 0;
     if (!panels[panel_count])                                                                                                            \
     {                                                                                                                                    \
         SNPRINTF_MSG_PSTR("malloc failed for PANEL_%02d", panel_count);                                                                  \
-        return 11;                                                                                                                       \
+        return 2;                                                                                                                       \
     }
 
 int init_panels()
@@ -229,7 +233,7 @@ int init_panels()
 #define MAX_CMD_SIZE 512
 
 // Number of commands in the queue
-#define MAX_QUEUE_LEN 2
+#define MAX_QUEUE_LEN 1
 
 /**
  * GCode Command Queue
@@ -255,9 +259,9 @@ int init_queue(){
 }
 
 /**
- * Get current number of commands in queue from read and write indices
+ * Get current number of commands in queue from read and write indices and full flag
  */
-inline int current_queue_len() {
+inline int queue_length() {
     if(queue_full) {
         return MAX_QUEUE_LEN;
     } else {
@@ -267,35 +271,119 @@ inline int current_queue_len() {
 }
 
 /**
- * Advance queue
- * Increment the read index
+ * Clear the command queue
  */
-inline void advance_read_queue() {
+void queue_clear()
+{
+    cmd_queue_index_r = cmd_queue_index_w;
+    queue_full
+}
+
+/**
+ * Increment the command queue read index
+ */
+inline void queue_advance_read() {
     if( cmd_queue_index_w == cmd_queue_index_r){
         queue_full = false;
     }
     cmd_queue_index_r = (cmd_queue_index_r+1) % MAX_QUEUE_LEN;
 }
 
-inline void advance_write_queue() {
+/**
+ * Increment the command queue write index
+ */
+inline void queue_advance_write() {
     cmd_queue_index_w = (cmd_queue_index_w+1) % MAX_QUEUE_LEN;
     if(cmd_queue_index_w == cmd_queue_index_r){
         queue_full = true;
     }
 }
 
+/**
+ * Push a command onto the end of the command queue
+ */
 inline bool enqueue_command(const char* cmd) {
-    if (*cmd == ';' || current_queue_len() >= MAX_QUEUE_LEN)
+    if (*cmd == COMMENT_PREFIX || queue_length() >= MAX_QUEUE_LEN)
         return false;
     strncpy(command_queue[cmd_queue_index_w], cmd, MAX_CMD_SIZE);
-    advance_write_queue();
+    queue_advance_write();
     if (DEBUG)
     {
         SER_SNPRINTF_COMMENT_PSTR("ENQ: Enqueued command: '%s'", cmd);
-        SER_SNPRINTF_COMMENT_PSTR("ENQ: cmd_queue_index_w: %d", cmd_queue_index_w);
-        SER_SNPRINTF_COMMENT_PSTR("ENQ: current_queue_len: %d", current_queue_len());
+        SER_SNPRINTF_COMMENT_PSTR("ENQ: queue_length: %d", queue_length());
     }
     return true;
+}
+
+static long gcode_N, gcode_LastN = 0;
+
+/**
+ * Flush serial and command queue then request resend
+ */
+void flush_serial_queue_resend() {
+    if(DEBUG) {
+        SER_SNPRINT_COMMENT_PSTR("FLU: Flushing");
+    }
+
+    SERIAL_OBJ.flush();
+    queue_clear();
+    SER_SNPRINTF_MSG_PSTR("RS %s", gcode_LastN);
+
+    if (DEBUG)
+    {
+        SER_SNPRINTF_COMMENT_PSTR("FLU: queue_length: %d", queue_length());
+    }
+
+}
+
+/**
+ * Validate Checksum (*) and Line Number (N) Parameters if they exist in the command
+ * Return error code
+ */
+int validate_serial_special_fields(char *command)
+{
+    char *npos = (*command == LINENO_PREFIX) ? command : NULL; // Require the N parameter to start the line
+    if (npos)
+    {
+        bool M110 = strstr_P(command, PSTR("M110")) != NULL;
+
+        if (M110)
+        {
+            char *n2pos = strchr(command + 4, 'N');
+            if (n2pos)
+                npos = n2pos;
+        }
+
+        gcode_N = strtol(npos + 1, NULL, 10);
+
+        if (gcode_N != gcode_LastN + 1 && !M110)
+        {
+            SNPRINTF_MSG_PSTR("Line numbers not sequential. Current: %d, Previous: %d", gcode_N, gcode_LastN);
+            return 10;
+        }
+    }
+    char *apos = strrchr(command, CHECKSUM_PREFIX);
+    if (apos)
+    {
+        uint8_t checksum = 0, count = uint8_t(apos - command);
+        while (count)
+            checksum ^= command[--count];
+        long expected_checksum = strtol(apos + 1, NULL, 10);
+        if (expected_checksum != checksum)
+        {
+            SNPRINTF_MSG_PSTR("Checksum mismatch: Client expected: %d, Server calculated: %d", expected_checksum, checksum);
+            return 19;
+        }
+    }
+    #ifndef NO_REQUIRE_CHECKSUM
+    else {
+        SNPRINTF_MSG_PSTR("Checksum missing");
+        return 19;
+    }
+    #endif
+
+    gcode_LastN = gcode_N;
+    return 0;
 }
 
 /**
@@ -314,19 +402,13 @@ void get_serial_commands()
     // The index of the character in the line being read from serial.
     int serial_count = 0;
 
-    while ((current_queue_len() < MAX_QUEUE_LEN) && (SERIAL_OBJ.available() > 0))
+    while ((queue_length() < MAX_QUEUE_LEN) && (SERIAL_OBJ.available() > 0))
     {
         serial_char = SERIAL_OBJ.read();
-        if (DEBUG)
-        {
-            SER_SNPRINTF_COMMENT_PSTR("GSC: serial char is: %c (%02x)", serial_char, serial_char);
-        }
+        // if (DEBUG) { SER_SNPRINTF_COMMENT_PSTR("GSC: serial char is: %c (%02x)", serial_char, serial_char); }
         if (CHAR_IS_EOL(serial_char))
         {
-            if (DEBUG)
-            {
-                SER_SNPRINT_COMMENT_PSTR("GSC: serial char is EOL");
-            }
+            // if (DEBUG) { SER_SNPRINT_COMMENT_PSTR("GSC: serial char is EOL"); }
             serial_comment_mode = false; // end of line == end of comment
 
             if (!serial_count)
@@ -341,18 +423,25 @@ void get_serial_commands()
                 command++; // Skip leading spaces
 
             // TODO: is it better to preprocess the command / calculate checksum here or later?
-
+            error_code = validate_serial_special_fields(command);
+            if(error_code)
+            {
+                print_error(error_code, msg_buffer);
+                flush_serial_queue_resend();
+                error_code = 0;
+                return;
+            }
             enqueue_command(command);
         }
         else if (serial_count >= MAX_CMD_SIZE - 1)
         {
-            if (DEBUG) { SER_SNPRINTF_COMMENT_PSTR("GSC: serial count %d is larger than MAX_CMD_SIZE: %d, ignore", serial_count, MAX_CMD_SIZE); }
+            // if (DEBUG) { SER_SNPRINTF_COMMENT_PSTR("GSC: serial count %d is larger than MAX_CMD_SIZE: %d, ignore", serial_count, MAX_CMD_SIZE); }
             // Keep fetching, but ignore normal characters beyond the max length
             // The command will be injected when EOL is reached
         }
-        else if (serial_char == '\\')
+        else if (serial_char == ESCAPE_PREFIX)
         { // Handle escapes
-            if (DEBUG) { SER_SNPRINT_COMMENT_PSTR("GSC: serial char is escape"); }
+            // if (DEBUG) { SER_SNPRINT_COMMENT_PSTR("GSC: serial char is escape"); }
             if (SERIAL_OBJ.available() > 0)
             {
                 // if we have one more character, copy it over
@@ -364,9 +453,9 @@ void get_serial_commands()
         }
         else
         {
-            if (DEBUG) { SER_SNPRINT_COMMENT_PSTR("GSC: serial char is regular"); }
+            // if (DEBUG) { SER_SNPRINT_COMMENT_PSTR("GSC: serial char is regular"); }
             // it's not a newline, carriage return or escape char
-            if (serial_char == ';')
+            if (serial_char == COMMENT_PREFIX)
                 serial_comment_mode = true;
             // So we can write it to the serial_line_buffer
             if (!serial_comment_mode)
@@ -378,16 +467,21 @@ void get_serial_commands()
 /**
  * Get Available commands
  * Fills queue with commands from any command sources.
- * Inspired by Marlin/Marlin_main::get_available_commands();]
+ * Inspired by Marlin/Marlin_main::get_available_commands()
  */
 void get_available_commands()
 {
     get_serial_commands();
-    // TODO: read commands off SD card
+    // TODO: maybe read commands off SD card?
 }
 
+/**
+ * Process Next Command
+ * Inspired by Marlin/Marlin_main::process_next_command()
+ */
 int process_next_command()
 {
+    char *const current_command = command_queue[cmd_queue_index_r];
     return 0;
 }
 
@@ -422,7 +516,7 @@ void setup()
     {
         if (pixel_count <= 0)
         {
-            error_code = 10;
+            error_code = 01;
             SNPRINTF_MSG_PSTR("pixel_count is %d. No pixels defined. Exiting", pixel_count);
         }
     }
@@ -441,7 +535,6 @@ void setup()
     if (DEBUG)
     {
         SER_SNPRINTF_COMMENT_PSTR("SET: pixel_count: %d, panel_count: %d", pixel_count, panel_count);
-
         for (int p = 0; p < panel_count; p++)
         {
             SER_SNPRINTF_COMMENT_PSTR("SET: -> panel %d len %d", p, panel_info[p]);
@@ -487,15 +580,15 @@ void loop()
     if (DEBUG)
     {
         SER_SNPRINTF_COMMENT_PSTR("LOO: Free SRAM %d", getFreeSram());
-        SER_SNPRINTF_COMMENT_PSTR("LOO: current_queue_len %d", current_queue_len());
+        SER_SNPRINTF_COMMENT_PSTR("LOO: queue_length %d", queue_length());
         SER_SNPRINTF_COMMENT_PSTR("LOO: cmd_queue_index_r %d", cmd_queue_index_r);
         SER_SNPRINTF_COMMENT_PSTR("LOO: cmd_queue_index_w %d", cmd_queue_index_w);
     }
 
-    if (current_queue_len() < MAX_QUEUE_LEN) {
+    if (queue_length() < MAX_QUEUE_LEN) {
         get_available_commands();
     }
-    if (current_queue_len()){
+    if (queue_length()){
         if (DEBUG) {
             SER_SNPRINTF_COMMENT_PSTR("LOO: Next command: '%s'", command_queue[cmd_queue_index_r]);
         }
@@ -507,6 +600,6 @@ void loop()
             // In the case of an error, stop execution
             stop();
         }
-        advance_read_queue();
+        queue_advance_read();
     }
 }
