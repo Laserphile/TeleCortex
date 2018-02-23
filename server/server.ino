@@ -1,6 +1,8 @@
 #include <Arduino.h>
 #include <FastLED.h>
 
+#include "macros.h"
+#include "types.h"
 #include "panel_config.h"
 #include "board_properties.h"
 
@@ -96,8 +98,6 @@ static char err_buffer[BUFFLEN_ERR];
     STRNCPY_PSTR(fmt_buffer, fmt_str, BUFFLEN_FMT); \
     SER_SNPRINTF_ERR(fmt_buffer, __VA_ARGS__);
 
-#define CHAR_IS_EOL(c) ((c == '\n') || (c == '\r'))
-#define CHAR_IS_SPACE(c) ((c == ' ') || (c == '\t') || (c == '\v') || (c == '\f') || (c == '\n') || (c == '\r'))
 #define COMMENT_PREFIX ';'
 #define ESCAPE_PREFIX '\\'
 #define LINENO_PREFIX 'N'
@@ -406,7 +406,7 @@ void get_serial_commands()
     {
         serial_char = SERIAL_OBJ.read();
         // if (DEBUG) { SER_SNPRINTF_COMMENT_PSTR("GSC: serial char is: %c (%02x)", serial_char, serial_char); }
-        if (CHAR_IS_EOL(serial_char))
+        if (IS_EOL(serial_char))
         {
             // if (DEBUG) { SER_SNPRINT_COMMENT_PSTR("GSC: serial char is EOL"); }
             serial_comment_mode = false; // end of line == end of comment
@@ -419,7 +419,7 @@ void get_serial_commands()
 
             char *command = serial_line_buffer;
 
-            while (CHAR_IS_SPACE(*command))
+            while (IS_SPACE(*command))
                 command++; // Skip leading spaces
 
             // TODO: is it better to preprocess the command / calculate checksum here or later?
@@ -477,6 +477,325 @@ void get_available_commands()
     get_serial_commands();
     // TODO: maybe read commands off SD card?
 }
+
+/**
+ * GCode
+ */
+
+/**
+ * GCode parser
+ *
+ *  - Parse a single gcode line for its letter, code, subcode, and parameters
+ *  - FASTER_GCODE_PARSER:
+ *    - Flags existing params (1 bit each)
+ *    - Stores value offsets (1 byte each)
+ *  - Provide accessors for parameters:
+ *    - Parameter exists
+ *    - Parameter has value
+ *    - Parameter value in different units and types
+ */
+class GCodeParser {
+  private:
+    static char *value_ptr;
+    static char *command_args;
+
+  public:
+    static char *command_ptr, // Start of the actual command, so it can be echoed
+        *string_arg;          // string of command line
+
+    static char command_letter; // G, M, or T
+    static int codenum;         // Number following command letter
+
+#if DEBUG
+    void debug();
+#endif
+
+    // Reset is done before parsing
+    static void reset();
+
+    // Code is found in the string. If not found, value_ptr is unchanged.
+    // This allows "if (seen('A')||seen('B'))" to use the last-found value.
+    static bool seen(const char c)
+    {
+        const char *p = strchr(command_args, c);
+        const bool b = !!p;
+        if (b)
+            value_ptr = DECIMAL_SIGNED(p[1]) ? &p[1] : (char *)NULL;
+        return b;
+    }
+
+    static bool seen_any()
+    {
+        return *command_args == '\0';
+    }
+
+    #define SEEN_TEST(L) !!strchr(command_args, L)
+
+    // Populate all fields by parsing a single line of GCode
+    static void parse(char *p);
+
+    // The code value pointer was set
+    FORCE_INLINE static bool has_value()
+    {
+        return value_ptr != NULL;
+    }
+
+    // Seen a parameter with a value
+    inline static bool seenval(const char c)
+    {
+        return seen(c) && has_value();
+    }
+
+    // Float removes 'E' to prevent scientific notation interpretation
+    inline static float value_float()
+    {
+        if (value_ptr)
+        {
+            char *e = value_ptr;
+            for (;;)
+            {
+                const char c = *e;
+                if (c == '\0' || c == ' ')
+                    break;
+                if (c == 'E' || c == 'e')
+                {
+                    *e = '\0';
+                    const float ret = strtod(value_ptr, NULL);
+                    *e = c;
+                    return ret;
+                }
+                ++e;
+            }
+            return strtod(value_ptr, NULL);
+        }
+        return 0.0;
+    }
+
+    // Code value as a long or ulong
+    inline static int32_t value_long()
+    {
+        return value_ptr ? strtol(value_ptr, NULL, 10) : 0L;
+    }
+    inline static uint32_t value_ulong()
+    {
+        return value_ptr ? strtoul(value_ptr, NULL, 10) : 0UL;
+    }
+
+    // Code value for use as time
+    FORCE_INLINE static millis_t value_millis()
+    {
+        return value_ulong();
+    }
+    FORCE_INLINE static millis_t value_millis_from_seconds()
+    {
+        return value_float() * 1000UL;
+    }
+
+    // Reduce to fewer bits
+    FORCE_INLINE static int16_t value_int()
+    {
+        return (int16_t)value_long();
+    }
+    FORCE_INLINE static uint16_t value_ushort()
+    {
+        return (uint16_t)value_long();
+    }
+    inline static uint8_t value_byte()
+    {
+        return (uint8_t)constrain(value_long(), 0, 255);
+    }
+
+    // Bool is true with no value or non-zero
+    inline static bool value_bool()
+    {
+        return !has_value() || value_byte();
+    }
+
+    void unknown_command_error();
+
+    // Provide simple value accessors with default option
+    FORCE_INLINE static float floatval(const char c, const float dval = 0.0)
+    {
+        return seenval(c) ? value_float() : dval;
+    }
+    FORCE_INLINE static bool boolval(const char c)
+    {
+        return seenval(c) ? value_bool() : seen(c);
+    }
+    FORCE_INLINE static uint8_t byteval(const char c, const uint8_t dval = 0)
+    {
+        return seenval(c) ? value_byte() : dval;
+    }
+    FORCE_INLINE static int16_t intval(const char c, const int16_t dval = 0)
+    {
+        return seenval(c) ? value_int() : dval;
+    }
+    FORCE_INLINE static uint16_t ushortval(const char c, const uint16_t dval = 0)
+    {
+        return seenval(c) ? value_ushort() : dval;
+    }
+    FORCE_INLINE static int32_t longval(const char c, const int32_t dval = 0)
+    {
+        return seenval(c) ? value_long() : dval;
+    }
+    FORCE_INLINE static uint32_t ulongval(const char c, const uint32_t dval = 0)
+    {
+        return seenval(c) ? value_ulong() : dval;
+    }
+}
+
+// extern GCodeParser parser;
+
+// Must be declared for allocation and to satisfy the linker
+// Zero values need no initialization.
+
+// char *GCodeParser::command_ptr,
+//     *GCodeParser::string_arg,
+//     *GCodeParser::value_ptr;
+// char GCodeParser::command_letter;
+// int GCodeParser::codenum;
+
+// Create a global instance of the GCode parser singleton
+GCodeParser parser;
+
+/**
+* Clear all code-seen (and value pointers)
+*
+* Since each param is set/cleared on seen codes,
+* this may be optimized by commenting out ZERO(param)
+*/
+void GCodeParser::reset()
+{
+    string_arg = NULL;    // No whole line argument
+    command_letter = '?'; // No command letter
+    codenum = 0;          // No command code
+}
+
+void GCodeParser::parse(char *p) {
+    reset(); // No codes to report
+
+    // Skip spaces
+    while (IS_SPACE(*p))
+        ++p;
+
+    // Skip N[-0-9] if included in the command line
+    if (*p == 'N' && NUMERIC_SIGNED(p[1]))
+    {
+        p += 2; // skip N[-0-9]
+        while (NUMERIC(*p))
+            ++p; // skip [0-9]*
+        while (IS_SPACE(*p))
+            ++p; // skip [ ]*
+    }
+
+    // *p now points to the current command, which should be G, M, or T
+    command_ptr = p;
+
+    // Get the command letter, which must be G, M, or T
+    const char letter = *p++;
+
+    // Nullify asterisk and trailing whitespace
+    char *starpos = strchr(p, '*');
+    if (starpos)
+    {
+        --starpos; // *
+        while (*starpos == ' ')
+            --starpos; // spaces...
+        starpos[1] = '\0';
+    }
+
+    // Bail if the letter is not G, M, or T
+    switch (letter)
+    {
+    case 'G':
+    case 'M':
+    case 'T':
+        break;
+    default:
+        return;
+    }
+
+    // Skip spaces to get the numeric part
+    while (*p == ' ')
+        p++;
+
+    // Bail if there's no command code number
+    if (!NUMERIC(*p))
+        return;
+
+    // Save the command letter at this point
+    // A '?' signifies an unknown command
+    command_letter = letter;
+
+    // Get the code number - integer digits only
+    codenum = 0;
+    do
+    {
+        codenum *= 10, codenum += *p++ - '0';
+    } while (NUMERIC(*p));
+
+    // Skip all spaces to get to the first argument, or nul
+    while (*p == ' ')
+        p++;
+
+    command_args = p; // Scan for parameters in seen()
+
+    string_arg = NULL;
+    while (const char code = *p++)
+    {
+        while (*p == ' ')
+            p++; // Skip spaces between parameters & values
+
+        // TODO: check this logic.
+        const bool has_num = (
+            NUMERIC(p[0])                                                             // [0-9]
+            || (p[0] == '.' && NUMERIC(p[1]))                                         // .[0-9]
+            || (
+                (p[0] == '-' || p[0] == '+') && (                                     // [-+]
+                    NUMERIC(p[1])                     //     [0-9]
+                    || (p[1] == '.' && NUMERIC(p[2])) //     .[0-9]
+                )
+            )
+        );
+
+        if (DEBUG)
+        {
+            SER_SNPRINTF_COMMENT_PSTR(
+                "Got letter %s at index %d ,has_num: %d",
+                code,
+                (int)(p - command_ptr - 1),
+                has_num
+            );
+        }
+
+        if (!has_num && !string_arg) { // No value? First time, keep as string_arg
+            string_arg = p - 1;
+            if (DEBUG) {
+                SER_SNPRINTF_COMMENT_PSTR(
+                    "string_arg: %02x",
+                    (void *)string_arg
+                );
+            }
+        }
+    }
+
+    if (!WITHIN(*p, 'A', 'Z'))
+    { // Another parameter right away?
+        while (*p && DECIMAL_SIGNED(*p))
+            p++; // Skip over the value section of a parameter
+        while (*p == ' ')
+            p++; // Skip over all spaces
+    }
+}
+void GCodeParser::unknown_command_error() {
+    // TODO: this
+}
+
+#if DEBUG
+void GCodeParser::debug() {
+    // TODO: this
+}
+#endif
 
 /**
  * Process Next Command
