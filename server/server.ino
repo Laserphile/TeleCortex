@@ -796,6 +796,31 @@ void GCodeParser::unknown_command_error() {
 #if DEBUG
 void GCodeParser::debug() {
     // TODO: this
+    SER_SNPRINTF_COMMENT_PSTR("PAR: Command: %s (%c %d)", command_ptr, command_letter, codenum);
+    SER_SNPRINTF_COMMENT_PSTR("Args: %s", command_args);
+    if(string_arg){
+        SER_SNPRINTF_COMMENT_PSTR(" string: '%s'", string_arg);
+    }
+    for (char c = 'A'; c <= 'Z'; ++c)
+    {
+        if (seen(c)) {
+            SER_SNPRINTF_COMMENT_PSTR("Code '%c'", c);
+            if( has_value() ){
+                SER_SNPRINTF_COMMENT_PSTR(" ->  float: %s", value_float());
+                SER_SNPRINTF_COMMENT_PSTR(" ->   long: %s", value_long());
+                SER_SNPRINTF_COMMENT_PSTR(" ->  ulong: %s", value_ulong());
+                SER_SNPRINTF_COMMENT_PSTR(" -> millis: %s", value_millis());
+                SER_SNPRINTF_COMMENT_PSTR(" -> sec-ms: %s", value_millis_from_seconds());
+                SER_SNPRINTF_COMMENT_PSTR(" ->    int: %s", value_int());
+                SER_SNPRINTF_COMMENT_PSTR(" -> ushort: %s", value_ushort());
+                SER_SNPRINTF_COMMENT_PSTR(" ->   byte: %s", (int)value_byte());
+                SER_SNPRINTF_COMMENT_PSTR(" ->   bool: %s", (int)value_bool());
+            }
+            else {
+                SER_SNPRINT_COMMENT_PSTR(" (no value)");
+            }
+        }
+    }
 }
 #endif
 
@@ -812,6 +837,9 @@ int process_next_command()
     char *const current_command = command_queue[cmd_queue_index_r];
 
     parser.parse(current_command);
+    if(DEBUG){
+        parser.debug();
+    }
     return process_parsed_command();
 }
 
