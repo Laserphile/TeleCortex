@@ -517,10 +517,10 @@ class GCodeParser {
     // This allows "if (seen('A')||seen('B'))" to use the last-found value.
     static bool seen(const char c)
     {
-        const char *p = strchr(command_args, c);
+        char *p = strchr(command_args, c);
         const bool b = !!p;
         if (b)
-            value_ptr = DECIMAL_SIGNED(p[1]) ? &p[1] : (char *)NULL;
+            value_ptr = (char *)(DECIMAL_SIGNED(p[1]) ? &p[1] : NULL);
         return b;
     }
 
@@ -642,18 +642,20 @@ class GCodeParser {
     {
         return seenval(c) ? value_ulong() : dval;
     }
-}
+};
+
 
 // extern GCodeParser parser;
 
 // Must be declared for allocation and to satisfy the linker
 // Zero values need no initialization.
 
-// char *GCodeParser::command_ptr,
-//     *GCodeParser::string_arg,
-//     *GCodeParser::value_ptr;
-// char GCodeParser::command_letter;
-// int GCodeParser::codenum;
+char *GCodeParser::command_ptr,
+    *GCodeParser::string_arg,
+    *GCodeParser::value_ptr;
+char GCodeParser::command_letter;
+int GCodeParser::codenum;
+char *GCodeParser::command_args; // start of parameters
 
 // Create a global instance of the GCode parser singleton
 GCodeParser parser;
@@ -797,6 +799,10 @@ void GCodeParser::debug() {
 }
 #endif
 
+int process_parsed_command() {
+    return 0;
+}
+
 /**
  * Process Next Command
  * Inspired by Marlin/Marlin_main::process_next_command()
@@ -804,7 +810,9 @@ void GCodeParser::debug() {
 int process_next_command()
 {
     char *const current_command = command_queue[cmd_queue_index_r];
-    return 0;
+
+    parser.parse(current_command);
+    return process_parsed_command();
 }
 
 /**
