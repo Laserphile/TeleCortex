@@ -24,6 +24,8 @@
     WITHIN(a, 'A', 'Z')\
     || WITHIN(a, 'a', 'z')\
     || NUMERIC(a)\
+    || (a == '/') \
+    || (a == '+') \
 )
 
 #define HAS_NUM(p) (\
