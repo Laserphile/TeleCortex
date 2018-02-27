@@ -647,7 +647,7 @@ void loop()
     // int hue = 0;
     // for (int i = 0; i < 255; i+=10)
     // {
-    //     for (int p = 0; p < panel_count; p++)
+    //     for (int p = 1; false;)
     //     {
     //         for (int j = 0; j < panel_info[p]; j++)
     //         {
