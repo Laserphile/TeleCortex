@@ -398,12 +398,10 @@ void get_available_commands()
 
 int gcode_M2600() {
     int panel_number = 0;
-    int panel_offset = 0;
+    int pixel_offset = 0;
     char *panel_payload;
     int panel_payload_len = 0;
-    #if DEBUG
-    char fake_panel[PANEL_00_LEN];
-    #endif
+
     if (DEBUG)
     {
         SER_SNPRINT_COMMENT_PSTR("GCO: Calling M2600");
@@ -416,14 +414,16 @@ int gcode_M2600() {
         {
             SER_SNPRINTF_COMMENT_PSTR("GCO: -> panel_number: %d", panel_number);
         }
+        // TODO: validate panel_number
     }
     if (parser.seen('S'))
     {
-        panel_offset = parser.value_int();
+        pixel_offset = parser.value_int();
         if(DEBUG)
         {
-            SER_SNPRINTF_COMMENT_PSTR("GCO: -> panel_offset: %d", panel_offset);
+            SER_SNPRINTF_COMMENT_PSTR("GCO: -> pixel_offset: %d", pixel_offset);
         }
+        // TODO: validate pixel_offset
     }
     if (parser.seen('V'))
     {
@@ -445,9 +445,13 @@ int gcode_M2600() {
                 MIN(BUFFLEN_MSG - msg_offset, panel_payload_len));
             SERIAL_OBJ.println(msg_buffer);
         }
+
+        // TODO: validate panel_payload_len is multiple of 4 (4 bytes encoded per 3 pixels (RGB))
+        // TODO: validate panel_payload is base64
     }
 
     if(DEBUG){
+        char fake_panel[panel_info[panel_number]];
         int dec_len = base64_decode(fake_panel, panel_payload, panel_payload_len);
         STRNCPY_PSTR(
             fmt_buffer, "%cGCO: -> decoded payload: (%d) 0x", BUFFLEN_FMT);
@@ -468,6 +472,40 @@ int gcode_M2600() {
         SERIAL_OBJ.println(msg_buffer);
     }
 
+    char pixel_data[3];
+    for(int pixel=pixel_offset; pixel<(panel_payload_len/4); pixel++){
+        // every 4 bytes of encoded base64 corresponds to a single RGB pixel
+        base64_decode(pixel_data, panel_payload + (pixel*4), 4);
+        if (DEBUG)
+        {
+            SER_SNPRINTF_COMMENT_PSTR(
+                "setting pixel %d on panel %d to RGB 0x%02x%02x%02x",
+                pixel, panel_number,
+                (uint8_t) pixel_data[0], (uint8_t)pixel_data[1], (uint8_t)pixel_data[2]
+            );
+        }
+        panels[panel_number][pixel].setRGB(
+            (uint8_t)pixel_data[0],
+            (uint8_t)pixel_data[1],
+            (uint8_t)pixel_data[2]
+        );
+    }
+
+    return 0;
+}
+
+int gcode_M2610() {
+    if (DEBUG)
+    {
+        SER_SNPRINT_COMMENT_PSTR("GCO: Calling M2600");
+    }
+    // TODO: This
+    FastLED.show();
+    return 0;
+}
+
+int gcode_M2611() {
+    // TODO: Is this even possible?
     return 0;
 }
 
@@ -491,6 +529,8 @@ int process_parsed_command() {
         {
         case 2600:
             return gcode_M2600();
+        case 2610:
+            return gcode_M2610();
         default:
             parser.unknown_command_error();
             break;
@@ -604,19 +644,19 @@ void loop()
         blink();
     }
 
-    int hue = 0;
-    for (int i = 0; i < 255; i+=10)
-    {
-        for (int p = 0; p < panel_count; p++)
-        {
-            for (int j = 0; j < panel_info[p]; j++)
-            {
-                hue = (int)(255 * (1.0 + (float)j / (float)panel_info[p]) + i) % 255;
-                panels[p][j].setHSV(hue, 255, 255);
-            }
-        }
-        FastLED.show();
-    }
+    // int hue = 0;
+    // for (int i = 0; i < 255; i+=10)
+    // {
+    //     for (int p = 0; p < panel_count; p++)
+    //     {
+    //         for (int j = 0; j < panel_info[p]; j++)
+    //         {
+    //             hue = (int)(255 * (1.0 + (float)j / (float)panel_info[p]) + i) % 255;
+    //             panels[p][j].setHSV(hue, 255, 255);
+    //         }
+    //     }
+    //     FastLED.show();
+    // }
     if (DEBUG)
     {
         SER_SNPRINTF_COMMENT_PSTR("LOO: Free SRAM %d", getFreeSram());
