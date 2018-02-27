@@ -1,8 +1,12 @@
 #include <Arduino.h>
 #include <FastLED.h>
 
-#include "panel_config.h"
+#include "config.h"
+#include "macros.h"
+#include "gcode.h"
+#include "types.h"
 #include "board_properties.h"
+#include "gcode.h"
 
 extern unsigned int __bss_end;
 extern unsigned int __heap_start;
@@ -17,97 +21,10 @@ extern void *__brkval;
 #define VALID_PIN(pin) ((pin) > 0)
 
 /**
- * Serial
- */
-
-// Length of various buffer
-#define BUFFLEN_MSG 256
-#define BUFFLEN_ERR 8
-#define BUFFLEN_FMT 128
-
-// Serial out Buffer
-static char msg_buffer[BUFFLEN_MSG];
-
-// Format string buffer. Temporarily store a format string from PROGMEM.
-static char fmt_buffer[BUFFLEN_MSG];
-
-// Buffer to store the error header
-static char err_buffer[BUFFLEN_ERR];
-
-// Might use bluetooth Serial later.
-#define SERIAL_OBJ Serial
-
-// Serial Baud rate
-#define SERIAL_BAUD 9600
-
-// snprintf to output buffer
-#define SNPRINTF_MSG(...)                           \
-    snprintf(msg_buffer, BUFFLEN_MSG, __VA_ARGS__); \
-
-// snprintf to error buffer
-#define SNPRINTF_ERR(...)                           \
-    snprintf(err_buffer, BUFFLEN_ERR, __VA_ARGS__); \
-
-// snprintf to output buffer then println to serial
-#define SER_SNPRINTF_MSG(...)           \
-    SNPRINTF_MSG(__VA_ARGS__);      \
-    SERIAL_OBJ.println(msg_buffer);
-
-// snprintf to error buffer then print to serial
-#define SER_SNPRINTF_ERR(...)  \
-    SNPRINTF_ERR(__VA_ARGS__); \
-    SERIAL_OBJ.print(err_buffer);
-
-// Force Progmem storage of static_str and retrieve to buff. Implementation is different for Teensy
-#if defined(TEENSYDUINO)
-#define STRNCPY_PSTR(buff, static_str, size) \
-    strncpy((buff), (static_str), (size));
-#else
-#define STRNCPY_PSTR(buff, static_str, size) \
-    /* TODO: figure out why this causes */   \
-    /* so many errors */                     \
-    strncpy_P((buff), PSTR(static_str), (size));
-#endif
-
-// copy fmt string from progmem to fmt_buffer, snprintf to output buffer
-#define SNPRINTF_MSG_PSTR(fmt_str, ...)              \
-    STRNCPY_PSTR(fmt_buffer, fmt_str, BUFFLEN_FMT); \
-    SNPRINTF_MSG(fmt_buffer, __VA_ARGS__);
-
-// Print a progmem-stored comment
-#define SER_SNPRINT_COMMENT_PSTR(comment) \
-    *msg_buffer = COMMENT_PREFIX;     \
-    STRNCPY_PSTR(msg_buffer + 1, comment, BUFFLEN_MSG - 1);\
-    SERIAL_OBJ.println(msg_buffer);
-
-// copy fmt string from progmem to fmt_buffer, snptintf to output buffer then println to serial
-#define SER_SNPRINTF_MSG_PSTR(fmt_str, ...)          \
-    STRNCPY_PSTR(fmt_buffer, fmt_str, BUFFLEN_FMT); \
-    SER_SNPRINTF_MSG(fmt_buffer, __VA_ARGS__);
-
-// copy fmt string from progmem to fmt_buffer, snptintf to output buffer as a comment then println to serial
-#define SER_SNPRINTF_COMMENT_PSTR(fmt_str, ...)     \
-    *fmt_buffer = COMMENT_PREFIX; \
-    STRNCPY_PSTR(fmt_buffer+1, fmt_str, BUFFLEN_FMT-1); \
-    SER_SNPRINTF_MSG(fmt_buffer, __VA_ARGS__);
-
-// copy fmt string from progmem to fmt_buffer, snptintf to error buffer then println to serial
-#define SER_SNPRINTF_ERR_PSTR(fmt_str, ...)         \
-    STRNCPY_PSTR(fmt_buffer, fmt_str, BUFFLEN_FMT); \
-    SER_SNPRINTF_ERR(fmt_buffer, __VA_ARGS__);
-
-#define CHAR_IS_EOL(c) ((c == '\n') || (c == '\r'))
-#define CHAR_IS_SPACE(c) ((c == ' ') || (c == '\t') || (c == '\v') || (c == '\f') || (c == '\n') || (c == '\r'))
-#define COMMENT_PREFIX ';'
-#define ESCAPE_PREFIX '\\'
-#define LINENO_PREFIX 'N'
-#define CHECKSUM_PREFIX '*'
-/**
  * Debug
  * Req: Serial
  */
 
-#define DEBUG 1
 #if DEBUG
 #define NO_REQUIRE_CHECKSUM 1
 #endif
@@ -406,7 +323,7 @@ void get_serial_commands()
     {
         serial_char = SERIAL_OBJ.read();
         // if (DEBUG) { SER_SNPRINTF_COMMENT_PSTR("GSC: serial char is: %c (%02x)", serial_char, serial_char); }
-        if (CHAR_IS_EOL(serial_char))
+        if (IS_EOL(serial_char))
         {
             // if (DEBUG) { SER_SNPRINT_COMMENT_PSTR("GSC: serial char is EOL"); }
             serial_comment_mode = false; // end of line == end of comment
@@ -419,7 +336,7 @@ void get_serial_commands()
 
             char *command = serial_line_buffer;
 
-            while (CHAR_IS_SPACE(*command))
+            while (IS_SPACE(*command))
                 command++; // Skip leading spaces
 
             // TODO: is it better to preprocess the command / calculate checksum here or later?
@@ -478,6 +395,52 @@ void get_available_commands()
     // TODO: maybe read commands off SD card?
 }
 
+int gcode_M2600() {
+    if(DEBUG){
+        SER_SNPRINT_COMMENT_PSTR("Calling M2600");
+    }
+    return 0;
+}
+
+/**
+ * GCode
+ */
+
+int process_parsed_command() {
+    // TODO: this
+    switch (parser.command_letter)
+    {
+    case 'G':
+        switch (parser.codenum)
+        {
+        default:
+            parser.unknown_command_error();
+            break;
+        }
+    case 'M':
+        switch (parser.codenum)
+        {
+        case 2600:
+            return gcode_M2600();
+        default:
+            parser.unknown_command_error();
+            break;
+        }
+    case 'P':
+        switch (parser.codenum)
+        {
+        default:
+            parser.unknown_command_error();
+            break;
+        }
+    default:
+        parser.unknown_command_error();
+        break;
+    }
+
+    return 0;
+}
+
 /**
  * Process Next Command
  * Inspired by Marlin/Marlin_main::process_next_command()
@@ -485,7 +448,12 @@ void get_available_commands()
 int process_next_command()
 {
     char *const current_command = command_queue[cmd_queue_index_r];
-    return 0;
+
+    parser.parse(current_command);
+    if(DEBUG){
+        parser.debug();
+    }
+    return process_parsed_command();
 }
 
 /**
@@ -520,7 +488,7 @@ void setup()
         if (pixel_count <= 0)
         {
             error_code = 01;
-            SNPRINTF_MSG_PSTR("pixel_count is %d. No pixels defined. Exiting", pixel_count);
+            SNPRINTF_MSG_PSTR("SET: pixel_count is %d. No pixels defined. Exiting", pixel_count);
         }
     }
     if (error_code)
@@ -532,7 +500,7 @@ void setup()
     }
     else
     {
-        SER_SNPRINT_COMMENT_PSTR("Panel Setup: OK");
+        SER_SNPRINT_COMMENT_PSTR("SET: Panel Setup: OK");
     }
 
     if (DEBUG)
@@ -554,7 +522,7 @@ void setup()
     }
     else
     {
-        SER_SNPRINT_COMMENT_PSTR("Queue Setup: OK");
+        SER_SNPRINT_COMMENT_PSTR("SET: Queue Setup: OK");
     }
 }
 
