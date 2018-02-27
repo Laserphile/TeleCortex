@@ -1,5 +1,5 @@
-#ifndef MACROS_H
-#define MACROS_H
+#ifndef __MACROS_H__
+#define __MACROS_H__
 
 #define FORCE_INLINE __attribute__((always_inline)) inline
 
@@ -33,4 +33,4 @@
 
 #define CEILING(x, y) (((x) + (y)-1) / (y))
 
-#endif //__MACROS_H
+#endif // __MACROS_H__

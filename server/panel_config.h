@@ -1,3 +1,6 @@
+#ifndef __PANEL_CONFIG_H__
+#define __PANEL_CONFIG_H__
+
 #define STATUS_PIN 13
 
 #if defined(__AVR_ATmega328P__) || defined(__MK20DX128__) // Derwent's testing setup on Arduino Uno
@@ -33,3 +36,5 @@
     #define PANEL_03_LEN 333
     #define MAX_PANELS 4
 #endif
+
+#endif // __PANEL_CONFIG_H__
