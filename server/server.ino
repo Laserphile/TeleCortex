@@ -549,6 +549,7 @@ class GCodeParser {
     // Float removes 'E' to prevent scientific notation interpretation
     inline static float value_float()
     {
+        float ret;
         if (value_ptr)
         {
             char *e = value_ptr;
@@ -560,15 +561,17 @@ class GCodeParser {
                 if (c == 'E' || c == 'e')
                 {
                     *e = '\0';
-                    const float ret = strtod(value_ptr, NULL);
+                    ret = strtod(value_ptr, NULL);
                     *e = c;
                     return ret;
                 }
                 ++e;
             }
-            return strtod(value_ptr, NULL);
+            ret = strtod(value_ptr, NULL);
+            return ret;
         }
-        return 0.0;
+        ret = 0.0;
+        return ret;
     }
 
     // Code value as a long or ulong
@@ -763,7 +766,7 @@ void GCodeParser::parse(char *p) {
         if (DEBUG)
         {
             SER_SNPRINTF_COMMENT_PSTR(
-                "Got letter %s at index %d ,has_num: %d",
+                "PAR: Got letter %c at index %d ,has_num: %d",
                 code,
                 (int)(p - command_ptr - 1),
                 has_num
@@ -774,7 +777,7 @@ void GCodeParser::parse(char *p) {
             string_arg = p - 1;
             if (DEBUG) {
                 SER_SNPRINTF_COMMENT_PSTR(
-                    "string_arg: %02x",
+                    "PAR: string_arg: %08x",
                     (void *)string_arg
                 );
             }
@@ -796,28 +799,29 @@ void GCodeParser::unknown_command_error() {
 #if DEBUG
 void GCodeParser::debug() {
     // TODO: this
-    SER_SNPRINTF_COMMENT_PSTR("PAR: Command: %s (%c %d)", command_ptr, command_letter, codenum);
-    SER_SNPRINTF_COMMENT_PSTR("Args: %s", command_args);
+    SER_SNPRINTF_COMMENT_PSTR("PAD: Command: %s (%c %d)", command_ptr, command_letter, codenum);
+    SER_SNPRINTF_COMMENT_PSTR("PAD: Args: %s", command_args);
     if(string_arg){
-        SER_SNPRINTF_COMMENT_PSTR(" string: '%s'", string_arg);
+        SER_SNPRINTF_COMMENT_PSTR("PAD: string: '%s'", string_arg);
     }
     for (char c = 'A'; c <= 'Z'; ++c)
     {
         if (seen(c)) {
-            SER_SNPRINTF_COMMENT_PSTR("Code '%c'", c);
+            SER_SNPRINTF_COMMENT_PSTR("PAD: Code '%c'", c);
             if( has_value() ){
-                SER_SNPRINTF_COMMENT_PSTR(" ->  float: %s", value_float());
-                SER_SNPRINTF_COMMENT_PSTR(" ->   long: %s", value_long());
-                SER_SNPRINTF_COMMENT_PSTR(" ->  ulong: %s", value_ulong());
-                SER_SNPRINTF_COMMENT_PSTR(" -> millis: %s", value_millis());
-                SER_SNPRINTF_COMMENT_PSTR(" -> sec-ms: %s", value_millis_from_seconds());
-                SER_SNPRINTF_COMMENT_PSTR(" ->    int: %s", value_int());
-                SER_SNPRINTF_COMMENT_PSTR(" -> ushort: %s", value_ushort());
-                SER_SNPRINTF_COMMENT_PSTR(" ->   byte: %s", (int)value_byte());
-                SER_SNPRINTF_COMMENT_PSTR(" ->   bool: %s", (int)value_bool());
+                SER_SNPRINT_COMMENT_PSTR( "PAD: (has value)");
+                SER_SNPRINTF_COMMENT_PSTR("PAD: ->  float: %f", value_float());
+                SER_SNPRINTF_COMMENT_PSTR("PAD: ->   long: %d", value_long());
+                SER_SNPRINTF_COMMENT_PSTR("PAD: ->  ulong: %d", value_ulong());
+                SER_SNPRINTF_COMMENT_PSTR("PAD: -> millis: %d", value_millis());
+                SER_SNPRINTF_COMMENT_PSTR("PAD: -> sec-ms: %d", value_millis_from_seconds());
+                SER_SNPRINTF_COMMENT_PSTR("PAD: ->    int: %d", value_int());
+                SER_SNPRINTF_COMMENT_PSTR("PAD: -> ushort: %d", value_ushort());
+                SER_SNPRINTF_COMMENT_PSTR("PAD: ->   byte: %d", (int)value_byte());
+                SER_SNPRINTF_COMMENT_PSTR("PAD: ->   bool: %d", (int)value_bool());
             }
             else {
-                SER_SNPRINT_COMMENT_PSTR(" (no value)");
+                SER_SNPRINT_COMMENT_PSTR("PAD: (no value)");
             }
         }
     }
