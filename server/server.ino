@@ -396,7 +396,58 @@ void get_available_commands()
     // TODO: maybe read commands off SD card?
 }
 
-int gcode_M2600() {
+int set_panel_pixel_RGB(int panel, int pixel, char * pixel_data){
+    if (DEBUG)
+    {
+        SER_SNPRINTF_COMMENT_PSTR(
+            "PIX: setting pixel %3d on panel %d to RGB 0x%02x%02x%02x",
+            pixel, panel,
+            (uint8_t)pixel_data[0], (uint8_t)pixel_data[1], (uint8_t)pixel_data[2]
+        );
+    }
+    panels[panel][pixel].setRGB(
+        (uint8_t)pixel_data[0],
+        (uint8_t)pixel_data[1],
+        (uint8_t)pixel_data[2]
+    );
+    return 0;
+}
+
+int set_panel_pixel_HSV(int panel, int pixel, char * pixel_data){
+    if (DEBUG)
+    {
+        SER_SNPRINTF_COMMENT_PSTR(
+            "PIX: setting pixel %3d on panel %d to HSV 0x%02x%02x%02x",
+            pixel, panel,
+            (uint8_t)pixel_data[0], (uint8_t)pixel_data[1], (uint8_t)pixel_data[2]
+        );
+    }
+    panels[panel][pixel].setHSV(
+        (uint8_t)pixel_data[0],
+        (uint8_t)pixel_data[1],
+        (uint8_t)pixel_data[2]
+    );
+    return 0;
+}
+
+int set_panel_RGB(int panel, char * pixel_data) {
+    for (int pixel = 0; pixel < panel_info[panel]; pixel++)
+    {
+        set_panel_pixel_RGB(panel, pixel, pixel_data);
+    }
+    return 0;
+}
+
+int set_panel_HSV(int panel, char * pixel_data) {
+    for (int pixel = 0; pixel < panel_info[panel]; pixel++)
+    {
+        set_panel_pixel_HSV(panel, pixel, pixel_data);
+    }
+    return 0;
+}
+
+int gcode_M260X()
+{
     int panel_number = 0;
     int pixel_offset = 0;
     char *panel_payload;
@@ -404,7 +455,7 @@ int gcode_M2600() {
 
     if (DEBUG)
     {
-        SER_SNPRINT_COMMENT_PSTR("GCO: Calling M2600");
+        SER_SNPRINTF_COMMENT_PSTR("GCO: Calling M%d", parser.codenum);
     }
 
     if (parser.seen('Q'))
@@ -473,23 +524,33 @@ int gcode_M2600() {
     }
 
     char pixel_data[3];
-    for(int pixel=pixel_offset; pixel<(panel_payload_len/4); pixel++){
-        // every 4 bytes of encoded base64 corresponds to a single RGB pixel
-        base64_decode(pixel_data, panel_payload + (pixel*4), 4);
-        if (DEBUG)
+
+    if( parser.codenum == 2600 || parser.codenum == 2601) {
+        for (int pixel = pixel_offset; pixel < (panel_payload_len / 4); pixel++)
         {
-            SER_SNPRINTF_COMMENT_PSTR(
-                "setting pixel %d on panel %d to RGB 0x%02x%02x%02x",
-                pixel, panel_number,
-                (uint8_t) pixel_data[0], (uint8_t)pixel_data[1], (uint8_t)pixel_data[2]
-            );
+            // every 4 bytes of encoded base64 corresponds to a single RGB pixel
+            base64_decode(pixel_data, panel_payload + (pixel * 4), 4);
+            if (parser.codenum == 2600)
+            {
+                set_panel_pixel_RGB(panel_number, pixel, pixel_data);
+            }
+            else if (parser.codenum == 2601)
+            {
+                set_panel_pixel_HSV(panel_number, pixel, pixel_data);
+            }
         }
-        panels[panel_number][pixel].setRGB(
-            (uint8_t)pixel_data[0],
-            (uint8_t)pixel_data[1],
-            (uint8_t)pixel_data[2]
-        );
+    } else if (parser.codenum == 2602 || parser.codenum == 2603) {
+        base64_decode(pixel_data, panel_payload, 4);
+        if (parser.codenum == 2602)
+        {
+            set_panel_RGB(panel_number, pixel_data);
+        }
+        else if (parser.codenum == 2603)
+        {
+            set_panel_HSV(panel_number, pixel_data);
+        }
     }
+
 
     return 0;
 }
@@ -528,7 +589,9 @@ int process_parsed_command() {
         switch (parser.codenum)
         {
         case 2600:
-            return gcode_M2600();
+        case 2601:
+        case 2602:
+            return gcode_M260X();
         case 2610:
             return gcode_M2610();
         default:
@@ -663,6 +726,7 @@ void loop()
         SER_SNPRINTF_COMMENT_PSTR("LOO: queue_length %d", queue_length());
         SER_SNPRINTF_COMMENT_PSTR("LOO: cmd_queue_index_r %d", cmd_queue_index_r);
         SER_SNPRINTF_COMMENT_PSTR("LOO: cmd_queue_index_w %d", cmd_queue_index_w);
+        // TODO: time since start and bytes written
     }
 
     if (queue_length() < MAX_QUEUE_LEN) {
