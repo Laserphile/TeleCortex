@@ -26,15 +26,14 @@
 class GCodeParser
 {
   private:
-    static char *value_ptr;
-    static char *command_args;
+    static char *command_args; // Start of arguments after command code
 
   public:
-    static char *command_ptr, // Start of the actual command, so it can be echoed
-        *string_arg;          // string of command line
-
-    static char command_letter; // G, M, or T
-    static int codenum;         // Number following command letter
+    static char *command_ptr;       // Start of the actual command, so it can be echoed
+    static char command_letter;     // G, M or P
+    static int codenum;             // Number following command letter
+    static char *value_ptr;         // Start of the current argument value string
+    static int arg_str_len;         // Length of the current argument value string
 
 #if DEBUG
     void debug();
@@ -47,19 +46,36 @@ class GCodeParser
     // This allows "if (seen('A')||seen('B'))" to use the last-found value.
     static bool seen(const char c)
     {
-        char *p = strchr(command_args, c);
-        const bool b = !!p;
-        if (b)
-            value_ptr = (char *)(DECIMAL_SIGNED(p[1]) ? &p[1] : NULL);
-        return b;
+        char *p = command_args;
+        value_ptr = NULL;
+        arg_str_len = 0;
+        while( const char code = *p++ ){
+            while (IS_SPACE(*p)){
+                p++; // Skip spaces between parameters & values
+            }
+            if ((code == c) && (HAS_ARG(p))){
+                value_ptr = p;
+            }
+            while (HAS_ARG(p)){
+                p++; // Skip to the end of the
+            }
+            if ((code == c) && (!!value_ptr))
+            {
+                arg_str_len = (p - value_ptr);
+                return true;
+            }
+            while (IS_SPACE(*p))
+            {
+                p++; // Skip spaces until next parameter
+            }
+        }
+        return false;
     }
 
     static bool seen_any()
     {
         return *command_args == '\0';
     }
-
-#define SEEN_TEST(L) !!strchr(command_args, L)
 
     // Populate all fields by parsing a single line of GCode
     static void parse(char *p);
@@ -86,9 +102,9 @@ class GCodeParser
             for (;;)
             {
                 const char c = *e;
-                if (c == '\0' || c == ' ')
+                if (IS_TERMINAL(c) || IS_SPACE(c))
                     break;
-                if (c == 'E' || c == 'e')
+                if (IS_EXPONENT_PREFIX(c))
                 {
                     *e = '\0';
                     ret = strtod(value_ptr, NULL);

@@ -6,10 +6,10 @@
 // Zero values need no initialization.
 
 char *GCodeParser::command_ptr,
-    *GCodeParser::string_arg,
     *GCodeParser::value_ptr;
 char GCodeParser::command_letter;
 int GCodeParser::codenum;
+int GCodeParser::arg_str_len;
 char *GCodeParser::command_args; // start of parameters
 
 // Create a global instance of the GCode parser singleton
@@ -23,7 +23,7 @@ GCodeParser parser;
 */
 void GCodeParser::reset()
 {
-    string_arg = NULL;    // No whole line argument
+    arg_str_len = 0;      // No whole line argument
     command_letter = '?'; // No command letter
     codenum = 0;          // No command code
 }
@@ -37,7 +37,7 @@ void GCodeParser::parse(char *p)
         ++p;
 
     // Skip N[-0-9] if included in the command line
-    if (*p == 'N' && NUMERIC_SIGNED(p[1]))
+    if (*p == LINENO_PREFIX && NUMERIC_SIGNED(p[1]))
     {
         p += 2; // skip N[-0-9]
         while (NUMERIC(*p))
@@ -46,35 +46,29 @@ void GCodeParser::parse(char *p)
             ++p; // skip [ ]*
     }
 
-    // *p now points to the current command, which should be G, M, or T
+    // *p now points to the current command
     command_ptr = p;
 
-    // Get the command letter, which must be G, M, or T
+    // Get the command letter
     const char letter = *p++;
 
     // Nullify asterisk and trailing whitespace
-    char *starpos = strchr(p, '*');
+    char *starpos = strchr(p, CHECKSUM_PREFIX);
     if (starpos)
     {
         --starpos; // *
-        while (*starpos == ' ')
+        while (IS_SPACE(*starpos))
             --starpos; // spaces...
         starpos[1] = '\0';
     }
 
-    // Bail if the letter is not G, M, or T
-    switch (letter)
-    {
-    case 'G':
-    case 'M':
-    case 'T':
-        break;
-    default:
+    // Bail if the letter is not a valid command prefix
+    if(!IS_CMD_PREFIX(letter)){
         return;
     }
 
     // Skip spaces to get the numeric part
-    while (*p == ' ')
+    while (IS_SPACE(*p))
         p++;
 
     // Bail if there's no command code number
@@ -93,52 +87,33 @@ void GCodeParser::parse(char *p)
     } while (NUMERIC(*p));
 
     // Skip all spaces to get to the first argument, or nul
-    while (*p == ' ')
+    while (IS_SPACE(*p))
         p++;
 
     command_args = p; // Scan for parameters in seen()
 
-    string_arg = NULL;
-    while (const char code = *p++)
+    while (const char code = *(p++))
     {
-        while (*p == ' ')
+        while (IS_SPACE(*p))
             p++; // Skip spaces between parameters & values
 
-        // TODO: check this logic.
-        const bool has_num = (NUMERIC(p[0])                                                             // [0-9]
-                              || (p[0] == '.' && NUMERIC(p[1]))                                         // .[0-9]
-                              || ((p[0] == '-' || p[0] == '+') && (                                     // [-+]
-                                                                      NUMERIC(p[1])                     //     [0-9]
-                                                                      || (p[1] == '.' && NUMERIC(p[2])) //     .[0-9]
-                                                                      )));
+        const bool has_arg = HAS_ARG(p);
 
         if (DEBUG)
         {
             SER_SNPRINTF_COMMENT_PSTR(
-                "PAR: Got letter %c at index %d ,has_num: %d",
+                "PAR: Got letter %c at index %d ,has_arg: %d",
                 code,
                 (int)(p - command_ptr - 1),
-                has_num);
+                has_arg);
         }
 
-        if (!has_num && !string_arg)
-        { // No value? First time, keep as string_arg
-            string_arg = p - 1;
-            if (DEBUG)
-            {
-                SER_SNPRINTF_COMMENT_PSTR(
-                    "PAR: string_arg: %08x",
-                    (void *)string_arg);
-            }
-        }
-    }
+        while(HAS_ARG(p))
+            p++;
 
-    if (!WITHIN(*p, 'A', 'Z'))
-    { // Another parameter right away?
-        while (*p && DECIMAL_SIGNED(*p))
-            p++; // Skip over the value section of a parameter
-        while (*p == ' ')
-            p++; // Skip over all spaces
+        //skip all the space until the next argument or null
+        while (IS_SPACE(*p))
+            p++;
     }
 }
 void GCodeParser::unknown_command_error()
@@ -152,10 +127,6 @@ void GCodeParser::debug()
     // TODO: this
     SER_SNPRINTF_COMMENT_PSTR("PAD: Command: %s (%c %d)", command_ptr, command_letter, codenum);
     SER_SNPRINTF_COMMENT_PSTR("PAD: Args: %s", command_args);
-    if (string_arg)
-    {
-        SER_SNPRINTF_COMMENT_PSTR("PAD: string: '%s'", string_arg);
-    }
     for (char c = 'A'; c <= 'Z'; ++c)
     {
         if (seen(c))
@@ -163,16 +134,27 @@ void GCodeParser::debug()
             SER_SNPRINTF_COMMENT_PSTR("PAD: Code '%c'", c);
             if (has_value())
             {
-                SER_SNPRINT_COMMENT_PSTR("PAD: (has value)");
-                SER_SNPRINTF_COMMENT_PSTR("PAD: ->  float: %f", value_float());
-                SER_SNPRINTF_COMMENT_PSTR("PAD: ->   long: %d", value_long());
-                SER_SNPRINTF_COMMENT_PSTR("PAD: ->  ulong: %d", value_ulong());
-                SER_SNPRINTF_COMMENT_PSTR("PAD: -> millis: %d", value_millis());
-                SER_SNPRINTF_COMMENT_PSTR("PAD: -> sec-ms: %d", value_millis_from_seconds());
-                SER_SNPRINTF_COMMENT_PSTR("PAD: ->    int: %d", value_int());
-                SER_SNPRINTF_COMMENT_PSTR("PAD: -> ushort: %d", value_ushort());
-                SER_SNPRINTF_COMMENT_PSTR("PAD: ->   byte: %d", (int)value_byte());
-                SER_SNPRINTF_COMMENT_PSTR("PAD: ->   bool: %d", (int)value_bool());
+                SER_SNPRINT_COMMENT_PSTR( "PAD: (has value)");
+                if (arg_str_len) {
+                    *msg_buffer = COMMENT_PREFIX;
+                    STRNCPY_PSTR(fmt_buffer + 1, "PAD: ->    str (%d) : '", BUFFLEN_FMT - 1);
+                    SNPRINTF_MSG(fmt_buffer, arg_str_len);
+                    SERIAL_OBJ.print(msg_buffer);
+                    strncpy(msg_buffer, value_ptr, arg_str_len);
+                    STRNCPY_PSTR(msg_buffer + arg_str_len, "'\0", BUFFLEN_MSG - arg_str_len);
+                    SERIAL_OBJ.println(msg_buffer);
+                }
+                if(HAS_NUM(value_ptr)){
+                    SER_SNPRINTF_COMMENT_PSTR("PAD: ->  float: %f", value_float());
+                    SER_SNPRINTF_COMMENT_PSTR("PAD: ->   long: %d", value_long());
+                    SER_SNPRINTF_COMMENT_PSTR("PAD: ->  ulong: %d", value_ulong());
+                    SER_SNPRINTF_COMMENT_PSTR("PAD: -> millis: %d", value_millis());
+                    SER_SNPRINTF_COMMENT_PSTR("PAD: -> sec-ms: %d", value_millis_from_seconds());
+                    SER_SNPRINTF_COMMENT_PSTR("PAD: ->    int: %d", value_int());
+                    SER_SNPRINTF_COMMENT_PSTR("PAD: -> ushort: %d", value_ushort());
+                    SER_SNPRINTF_COMMENT_PSTR("PAD: ->   byte: %d", (int)value_byte());
+                    SER_SNPRINTF_COMMENT_PSTR("PAD: ->   bool: %d", (int)value_bool());
+                }
             }
             else
             {
