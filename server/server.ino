@@ -7,6 +7,7 @@
 #include "types.h"
 #include "board_properties.h"
 #include "gcode.h"
+#include "b64.h"
 
 extern unsigned int __bss_end;
 extern unsigned int __heap_start;
@@ -396,46 +397,76 @@ void get_available_commands()
 }
 
 int gcode_M2600() {
-    if(DEBUG){
-        SER_SNPRINT_COMMENT_PSTR( "GCO: Calling M2600");
-        int panel_number = 0;
-        if(parser.seen('Q')){
-            panel_number = parser.value_int();
+    int panel_number = 0;
+    int panel_offset = 0;
+    char *panel_payload;
+    int panel_payload_len = 0;
+    #if DEBUG
+    char fake_panel[PANEL_00_LEN];
+    #endif
+    if (DEBUG)
+    {
+        SER_SNPRINT_COMMENT_PSTR("GCO: Calling M2600");
+    }
+
+    if (parser.seen('Q'))
+    {
+        panel_number = parser.value_int();
+        if(DEBUG)
+        {
             SER_SNPRINTF_COMMENT_PSTR("GCO: -> panel_number: %d", panel_number);
         }
-        int offset;
-        if (parser.seen('S'))
+    }
+    if (parser.seen('S'))
+    {
+        panel_offset = parser.value_int();
+        if(DEBUG)
         {
-            offset = parser.value_int();
-            SER_SNPRINTF_COMMENT_PSTR("GCO: -> offset: %d", offset);
+            SER_SNPRINTF_COMMENT_PSTR("GCO: -> panel_offset: %d", panel_offset);
         }
-        char * panel_payload;
-        int panel_payload_len;
-        if (parser.seen('V'))
+    }
+    if (parser.seen('V'))
+    {
+        panel_payload = parser.value_ptr;
+        panel_payload_len = parser.arg_str_len;
+        if (DEBUG)
         {
-            panel_payload = parser.value_ptr;
-            panel_payload_len = parser.arg_str_len;
             STRNCPY_PSTR(
-                fmt_buffer, "%cGCO: -> payload: (%d) '%%n%%%ds'", BUFFLEN_FMT
-            );
+                fmt_buffer, "%cGCO: -> payload: (%d) '%%n%%%ds'", BUFFLEN_FMT);
             snprintf(
                 msg_buffer, BUFFLEN_FMT, fmt_buffer,
-                COMMENT_PREFIX, panel_payload_len, panel_payload_len
-            );
-            strncpy( fmt_buffer, msg_buffer, BUFFLEN_FMT );
+                COMMENT_PREFIX, panel_payload_len, panel_payload_len);
+            strncpy(fmt_buffer, msg_buffer, BUFFLEN_FMT);
             int msg_offset = 0;
             snprintf(
-                msg_buffer, BUFFLEN_MSG, fmt_buffer, &msg_offset, ""
-            );
+                msg_buffer, BUFFLEN_MSG, fmt_buffer, &msg_offset, "");
             strncpy(
                 msg_buffer + msg_offset, panel_payload,
-                MIN(BUFFLEN_MSG - msg_offset, panel_payload_len)
-            );
+                MIN(BUFFLEN_MSG - msg_offset, panel_payload_len));
             SERIAL_OBJ.println(msg_buffer);
         }
     }
 
-
+    if(DEBUG){
+        int dec_len = base64_decode(fake_panel, panel_payload, panel_payload_len);
+        STRNCPY_PSTR(
+            fmt_buffer, "%cGCO: -> decoded payload: (%d) 0x", BUFFLEN_FMT);
+        snprintf(
+            msg_buffer, BUFFLEN_FMT, fmt_buffer,
+            COMMENT_PREFIX, dec_len, dec_len * 2);
+        strncpy(fmt_buffer, msg_buffer, BUFFLEN_FMT);
+        int offset_payload_start = snprintf(
+            msg_buffer, BUFFLEN_MSG, fmt_buffer
+        );
+        for(int i=0; i<dec_len; i++){
+            sprintf(
+                msg_buffer + offset_payload_start + i*2,
+                "%02x",
+                fake_panel[i]
+            );
+        }
+        SERIAL_OBJ.println(msg_buffer);
+    }
 
     return 0;
 }
