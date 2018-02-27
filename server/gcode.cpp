@@ -136,20 +136,34 @@ void GCodeParser::debug()
             {
                 SER_SNPRINT_COMMENT_PSTR( "PAD: (has value)");
                 if (arg_str_len) {
-                    *msg_buffer = COMMENT_PREFIX;
-                    STRNCPY_PSTR(fmt_buffer + 1, "PAD: ->    str (%d) : '", BUFFLEN_FMT - 1);
-                    SNPRINTF_MSG(fmt_buffer, arg_str_len);
-                    SERIAL_OBJ.print(msg_buffer);
-                    strncpy(msg_buffer, value_ptr, arg_str_len);
-                    STRNCPY_PSTR(msg_buffer + arg_str_len, "'\0", BUFFLEN_MSG - arg_str_len);
+                    STRNCPY_PSTR(
+                        fmt_buffer, "%cPAD: ->    str (%d) : '%%n%%%ds'", BUFFLEN_FMT);
+                    snprintf(
+                        msg_buffer, BUFFLEN_FMT, fmt_buffer,
+                        COMMENT_PREFIX, arg_str_len, arg_str_len);
+                    strncpy(fmt_buffer, msg_buffer, BUFFLEN_FMT);
+                    int msg_offset = 0;
+                    snprintf(
+                        msg_buffer, BUFFLEN_MSG, fmt_buffer, &msg_offset, "");
+                    strncpy(
+                        msg_buffer + msg_offset, value_ptr,
+                        MIN(BUFFLEN_MSG - msg_offset, arg_str_len));
                     SERIAL_OBJ.println(msg_buffer);
+
+                    // snprintf(
+                    //     fmt_buffer, BUFFLEN_FMT, "%cPAD: ->    str (%d) : '%%%ds'",
+                    //     COMMENT_PREFIX, arg_str_len, arg_str_len);
+                    // snprintf(
+                    //     msg_buffer, BUFFLEN_MSG, fmt_buffer, value_ptr
+                    // );
+                    // SERIAL_OBJ.println(msg_buffer);
                 }
                 if(HAS_NUM(value_ptr)){
                     SER_SNPRINTF_COMMENT_PSTR("PAD: ->  float: %f", value_float());
                     SER_SNPRINTF_COMMENT_PSTR("PAD: ->   long: %d", value_long());
                     SER_SNPRINTF_COMMENT_PSTR("PAD: ->  ulong: %d", value_ulong());
-                    SER_SNPRINTF_COMMENT_PSTR("PAD: -> millis: %d", value_millis());
-                    SER_SNPRINTF_COMMENT_PSTR("PAD: -> sec-ms: %d", value_millis_from_seconds());
+                    // SER_SNPRINTF_COMMENT_PSTR("PAD: -> millis: %d", value_millis());
+                    // SER_SNPRINTF_COMMENT_PSTR("PAD: -> sec-ms: %d", value_millis_from_seconds());
                     SER_SNPRINTF_COMMENT_PSTR("PAD: ->    int: %d", value_int());
                     SER_SNPRINTF_COMMENT_PSTR("PAD: -> ushort: %d", value_ushort());
                     SER_SNPRINTF_COMMENT_PSTR("PAD: ->   byte: %d", (int)value_byte());

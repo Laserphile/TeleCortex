@@ -397,8 +397,46 @@ void get_available_commands()
 
 int gcode_M2600() {
     if(DEBUG){
-        SER_SNPRINT_COMMENT_PSTR("Calling M2600");
+        SER_SNPRINT_COMMENT_PSTR( "GCO: Calling M2600");
+        int panel_number = 0;
+        if(parser.seen('Q')){
+            panel_number = parser.value_int();
+            SER_SNPRINTF_COMMENT_PSTR("GCO: -> panel_number: %d", panel_number);
+        }
+        int offset;
+        if (parser.seen('S'))
+        {
+            offset = parser.value_int();
+            SER_SNPRINTF_COMMENT_PSTR("GCO: -> offset: %d", offset);
+        }
+        char * panel_payload;
+        int panel_payload_len;
+        if (parser.seen('V'))
+        {
+            panel_payload = parser.value_ptr;
+            panel_payload_len = parser.arg_str_len;
+            STRNCPY_PSTR(
+                fmt_buffer, "%cGCO: -> payload: (%d) '%%n%%%ds'", BUFFLEN_FMT
+            );
+            snprintf(
+                msg_buffer, BUFFLEN_FMT, fmt_buffer,
+                COMMENT_PREFIX, panel_payload_len, panel_payload_len
+            );
+            strncpy( fmt_buffer, msg_buffer, BUFFLEN_FMT );
+            int msg_offset = 0;
+            snprintf(
+                msg_buffer, BUFFLEN_MSG, fmt_buffer, &msg_offset, ""
+            );
+            strncpy(
+                msg_buffer + msg_offset, panel_payload,
+                MIN(BUFFLEN_MSG - msg_offset, panel_payload_len)
+            );
+            SERIAL_OBJ.println(msg_buffer);
+        }
     }
+
+
+
     return 0;
 }
 

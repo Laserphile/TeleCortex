@@ -27,6 +27,9 @@
     || (a == '/') \
     || (a == '+') \
 )
+#ifndef MIN
+#define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
+#endif
 
 #define HAS_NUM(p) (\
     NUMERIC(p[0]) \

@@ -44,6 +44,8 @@ class GCodeParser
 
     // Code is found in the string. If not found, value_ptr is unchanged.
     // This allows "if (seen('A')||seen('B'))" to use the last-found value.
+    // Scans command_args for the argument `c`, and sets `value_ptr` and `arg_str_len` if found.
+
     static bool seen(const char c)
     {
         char *p = command_args;
