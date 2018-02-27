@@ -1,8 +1,6 @@
 #ifndef __PANEL_CONFIG_H__
 #define __PANEL_CONFIG_H__
 
-#define STATUS_PIN 13
-
 #if defined(__AVR_ATmega328P__) || defined(__MK20DX128__) // Derwent's testing setup on Arduino Uno
     #define PANEL_TYPE NEOPIXEL
     #define NEEDS_CLK 0

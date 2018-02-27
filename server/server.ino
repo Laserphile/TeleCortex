@@ -5,7 +5,6 @@
 #include "macros.h"
 #include "gcode.h"
 #include "types.h"
-#include "panel_config.h"
 #include "board_properties.h"
 #include "gcode.h"
 
@@ -396,12 +395,49 @@ void get_available_commands()
     // TODO: maybe read commands off SD card?
 }
 
+int gcode_M2600() {
+    if(DEBUG){
+        SER_SNPRINT_COMMENT_PSTR("Calling M2600");
+    }
+    return 0;
+}
+
 /**
  * GCode
  */
 
 int process_parsed_command() {
     // TODO: this
+    switch (parser.command_letter)
+    {
+    case 'G':
+        switch (parser.codenum)
+        {
+        default:
+            parser.unknown_command_error();
+            break;
+        }
+    case 'M':
+        switch (parser.codenum)
+        {
+        case 2600:
+            return gcode_M2600();
+        default:
+            parser.unknown_command_error();
+            break;
+        }
+    case 'P':
+        switch (parser.codenum)
+        {
+        default:
+            parser.unknown_command_error();
+            break;
+        }
+    default:
+        parser.unknown_command_error();
+        break;
+    }
+
     return 0;
 }
 
@@ -452,7 +488,7 @@ void setup()
         if (pixel_count <= 0)
         {
             error_code = 01;
-            SNPRINTF_MSG_PSTR("pixel_count is %d. No pixels defined. Exiting", pixel_count);
+            SNPRINTF_MSG_PSTR("SET: pixel_count is %d. No pixels defined. Exiting", pixel_count);
         }
     }
     if (error_code)
@@ -464,7 +500,7 @@ void setup()
     }
     else
     {
-        SER_SNPRINT_COMMENT_PSTR("Panel Setup: OK");
+        SER_SNPRINT_COMMENT_PSTR("SET: Panel Setup: OK");
     }
 
     if (DEBUG)
@@ -486,7 +522,7 @@ void setup()
     }
     else
     {
-        SER_SNPRINT_COMMENT_PSTR("Queue Setup: OK");
+        SER_SNPRINT_COMMENT_PSTR("SET: Queue Setup: OK");
     }
 }
 
