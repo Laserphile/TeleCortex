@@ -3,7 +3,7 @@
 
 // Length of various buffer
 #define BUFFLEN_MSG 256
-#define BUFFLEN_ERR 8
+#define BUFFLEN_ERR 16
 #define BUFFLEN_FMT 128
 
 // Serial out Buffer

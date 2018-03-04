@@ -11,6 +11,7 @@ char GCodeParser::command_letter;
 int GCodeParser::codenum;
 int GCodeParser::arg_str_len;
 char *GCodeParser::command_args; // start of parameters
+long GCodeParser::linenum;
 
 // Create a global instance of the GCode parser singleton
 GCodeParser parser;
@@ -26,6 +27,7 @@ void GCodeParser::reset()
     arg_str_len = 0;      // No whole line argument
     command_letter = '?'; // No command letter
     codenum = 0;          // No command code
+    linenum = -1;
 }
 
 void GCodeParser::parse(char *p)
@@ -37,9 +39,10 @@ void GCodeParser::parse(char *p)
         ++p;
 
     // Skip N[-0-9] if included in the command line
-    if (*p == LINENO_PREFIX && NUMERIC_SIGNED(p[1]))
+    if (*p == LINENUM_PREFIX && NUMERIC_SIGNED(p[1]))
     {
-        p += 2; // skip N[-0-9]
+        p += 1;
+        linenum = strtol(p, NULL, 10);
         while (NUMERIC(*p))
             ++p; // skip [0-9]*
         while (IS_SPACE(*p))
@@ -115,16 +118,19 @@ void GCodeParser::parse(char *p)
             p++;
     }
 }
-void GCodeParser::unknown_command_error()
+int GCodeParser::unknown_command_error()
 {
-    // TODO: this
+    SNPRINTF_MSG_PSTR("Unknown Command: %s (%c %d)", command_ptr, command_letter, codenum);
+    return 11;
 }
 
 #if DEBUG
 void GCodeParser::debug()
 {
-    // TODO: this
     SER_SNPRINTF_COMMENT_PSTR("PAD: Command: %s (%c %d)", command_ptr, command_letter, codenum);
+    if(linenum >= 0){
+        SER_SNPRINTF_COMMENT_PSTR("PAD: LineNum: %d", linenum);
+    }
     SER_SNPRINTF_COMMENT_PSTR("PAD: Args: %s", command_args);
     for (char c = 'A'; c <= 'Z'; ++c)
     {

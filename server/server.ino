@@ -3,6 +3,7 @@
 
 #include "config.h"
 #include "macros.h"
+#include "clock.h"
 #include "gcode.h"
 #include "types.h"
 #include "board_properties.h"
@@ -47,6 +48,16 @@ int getFreeSram()
 void print_error(int error_code, char* message) {
     SER_SNPRINTF_ERR_PSTR("E%03d:", error_code);
     SERIAL_OBJ.println(message);
+}
+
+void print_line_error(int linenum, int error_code, char* message) {
+    SER_SNPRINTF_ERR_PSTR("N%d E%03d:", linenum, error_code);
+    SERIAL_OBJ.println(message);
+}
+
+void print_line_ok(int linenum) {
+    SER_SNPRINTF_ERR_PSTR("N%d: OK", linenum);
+    SERIAL_OBJ.println();
 }
 
 void blink()
@@ -262,7 +273,7 @@ void flush_serial_queue_resend() {
  */
 int validate_serial_special_fields(char *command)
 {
-    char *npos = (*command == LINENO_PREFIX) ? command : NULL; // Require the N parameter to start the line
+    char *npos = (*command == LINENUM_PREFIX) ? command : NULL; // Require the N parameter to start the line
     if (npos)
     {
         bool M110 = strstr_P(command, PSTR("M110")) != NULL;
@@ -585,8 +596,7 @@ int process_parsed_command() {
         switch (parser.codenum)
         {
         default:
-            parser.unknown_command_error();
-            break;
+            return parser.unknown_command_error();
         }
     case 'M':
         switch (parser.codenum)
@@ -599,19 +609,16 @@ int process_parsed_command() {
         case 2610:
             return gcode_M2610();
         default:
-            parser.unknown_command_error();
-            break;
+            return parser.unknown_command_error();
         }
     case 'P':
         switch (parser.codenum)
         {
         default:
-            parser.unknown_command_error();
-            break;
+            return parser.unknown_command_error();
         }
     default:
-        parser.unknown_command_error();
-        break;
+        return parser.unknown_command_error();
     }
 
     return 0;
@@ -623,7 +630,7 @@ long long int commands_processed = 0;
  * Process Next Command
  * Inspired by Marlin/Marlin_main::process_next_command()
  */
-int process_next_command()
+void process_next_command()
 {
     char *const current_command = command_queue[cmd_queue_index_r];
     int response = 0;
@@ -632,11 +639,22 @@ int process_next_command()
     #if DEBUG
         parser.debug();
     #endif
-    response = process_parsed_command();
-    if(response == 0){
-        commands_processed ++;
+    error_code = process_parsed_command();
+    if(error_code != 0){
+        if(parser.linenum >= 0){
+            print_line_error(parser.linenum, error_code, msg_buffer);
+        } else {
+            print_error(error_code, msg_buffer);
+        }
+        // TODO: flush buffer?
+        // TODO: decrement gcode_LastN?
+    } else {
+        if(parser.linenum >= 0){
+            print_line_ok(parser.linenum);
+        }
+        commands_processed++;
     }
-    return response;
+    error_code = 0;
 }
 
 /**
@@ -744,14 +762,7 @@ void loop()
         #if DEBUG
             SER_SNPRINTF_COMMENT_PSTR("LOO: Next command: '%s'", command_queue[cmd_queue_index_r]);
         #endif
-        error_code = process_next_command();
-        if (error_code)
-        {
-            // If there was an error, print the error code before the out buffer
-            print_error(error_code, msg_buffer);
-            // In the case of an error, stop execution
-            stop();
-        }
+        process_next_command();
         queue_advance_read();
     } else {
         // TODO: limit rate of sending IDLE

@@ -8,7 +8,7 @@
 
 #define COMMENT_PREFIX ';'
 #define ESCAPE_PREFIX '\\'
-#define LINENO_PREFIX 'N'
+#define LINENUM_PREFIX 'N'
 #define CHECKSUM_PREFIX '*'
 
 /**
@@ -34,6 +34,7 @@ class GCodeParser
     static int codenum;             // Number following command letter
     static char *value_ptr;         // Start of the current argument value string
     static int arg_str_len;         // Length of the current argument value string
+    static long linenum;            // Line number of command if provided
 
 #if DEBUG
     void debug();
@@ -162,7 +163,7 @@ class GCodeParser
         return !has_value() || value_byte();
     }
 
-    void unknown_command_error();
+    int unknown_command_error();
 
     // Provide simple value accessors with default option
     FORCE_INLINE static float floatval(const char c, const float dval = 0.0)
