@@ -30,12 +30,6 @@ extern void *__brkval;
 #define DEBUG 0
 #endif
 
-#if DEBUG
-#define NO_REQUIRE_CHECKSUM 1
-#else
-#define NO_REQUIRE_CHECKSUM 1
-#endif
-
 // Current error code
 static int error_code = 0;
 
@@ -623,6 +617,8 @@ int process_parsed_command() {
     return 0;
 }
 
+long long int commands_processed = 0;
+
 /**
  * Process Next Command
  * Inspired by Marlin/Marlin_main::process_next_command()
@@ -630,12 +626,17 @@ int process_parsed_command() {
 int process_next_command()
 {
     char *const current_command = command_queue[cmd_queue_index_r];
+    int response = 0;
 
     parser.parse(current_command);
     #if DEBUG
         parser.debug();
     #endif
-    return process_parsed_command();
+    response = process_parsed_command();
+    if(response == 0){
+        commands_processed ++;
+    }
+    return response;
 }
 
 /**
@@ -711,19 +712,22 @@ void loop()
 {
     blink();
 
-    // int hue = 0;
-    // for (int i = 0; i < 255; i+=10)
-    // {
-    //     for (int p = 1; false;)
-    //     {
-    //         for (int j = 0; j < panel_info[p]; j++)
-    //         {
-    //             hue = (int)(255 * (1.0 + (float)j / (float)panel_info[p]) + i) % 255;
-    //             panels[p][j].setHSV(hue, 255, 255);
-    //         }
-    //     }
-    //     FastLED.show();
-    // }
+    if(RAINBOWS_UNTIL_GCODE && commands_processed == 0){
+        int hue = 0;
+        for (int i = 0; i < 255; i+=10)
+        {
+            for (int p = 0; p < panel_count; p++)
+            {
+                for (int j = 0; j < panel_info[p]; j++)
+                {
+                    hue = (int)(255 * (1.0 + (float)j / (float)panel_info[p]) + i) % 255;
+                    panels[p][j].setHSV(hue, 255, 255);
+                }
+            }
+            FastLED.show();
+        }
+    }
+
     #if DEBUG
         // TODO: limit rate of sending debug prints
         SER_SNPRINTF_COMMENT_PSTR("LOO: Free SRAM %d", getFreeSram());
