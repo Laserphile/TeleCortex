@@ -32,6 +32,8 @@ extern void *__brkval;
 
 #if DEBUG
 #define NO_REQUIRE_CHECKSUM 1
+#else
+#define NO_REQUIRE_CHECKSUM 1
 #endif
 
 // Current error code
@@ -56,7 +58,7 @@ void print_error(int error_code, char* message) {
 void blink()
 {
     digitalWrite(STATUS_PIN, HIGH); // turn the LED on (HIGH is the voltage level)
-    delay(1000);                    // wait for a second
+    delay(10);                    // wait for a second
     digitalWrite(STATUS_PIN, LOW);  // turn the LED off by making the voltage LOW
 }
 
@@ -233,11 +235,10 @@ inline bool enqueue_command(const char* cmd) {
         return false;
     strncpy(command_queue[cmd_queue_index_w], cmd, MAX_CMD_SIZE);
     queue_advance_write();
-    if (DEBUG)
-    {
+    #if DEBUG
         SER_SNPRINTF_COMMENT_PSTR("ENQ: Enqueued command: '%s'", cmd);
         SER_SNPRINTF_COMMENT_PSTR("ENQ: queue_length: %d", queue_length());
-    }
+    #endif
     return true;
 }
 
@@ -247,18 +248,17 @@ static long gcode_N, gcode_LastN = 0;
  * Flush serial and command queue then request resend
  */
 void flush_serial_queue_resend() {
-    if(DEBUG) {
+    #if DEBUG
         SER_SNPRINT_COMMENT_PSTR("FLU: Flushing");
-    }
+    #endif
 
     SERIAL_OBJ.flush();
     queue_clear();
     SER_SNPRINTF_MSG_PSTR("RS %s", gcode_LastN);
 
-    if (DEBUG)
-    {
+    #if DEBUG
         SER_SNPRINTF_COMMENT_PSTR("FLU: queue_length: %d", queue_length());
-    }
+    #endif
 
 }
 
@@ -352,9 +352,9 @@ void get_serial_commands()
             if(error_code)
             {
                 print_error(error_code, msg_buffer);
-                if(DEBUG) {
+                #if DEBUG
                     SER_SNPRINTF_COMMENT_PSTR("GSC: Previous command: %s", serial_line_buffer);
-                }
+                #endif
                 flush_serial_queue_resend();
                 error_code = 0;
                 return;
@@ -404,14 +404,14 @@ void get_available_commands()
 }
 
 int set_panel_pixel_RGB(int panel, int pixel, char * pixel_data){
-    if (DEBUG)
-    {
-        SER_SNPRINTF_COMMENT_PSTR(
-            "PIX: setting pixel %3d on panel %d to RGB 0x%02x%02x%02x",
-            pixel, panel,
-            (uint8_t)pixel_data[0], (uint8_t)pixel_data[1], (uint8_t)pixel_data[2]
-        );
-    }
+    // if (DEBUG)
+    // {
+    //     SER_SNPRINTF_COMMENT_PSTR(
+    //         "PIX: setting pixel %3d on panel %d to RGB 0x%02x%02x%02x",
+    //         pixel, panel,
+    //         (uint8_t)pixel_data[0], (uint8_t)pixel_data[1], (uint8_t)pixel_data[2]
+    //     );
+    // }
     panels[panel][pixel].setRGB(
         (uint8_t)pixel_data[0],
         (uint8_t)pixel_data[1],
@@ -421,14 +421,14 @@ int set_panel_pixel_RGB(int panel, int pixel, char * pixel_data){
 }
 
 int set_panel_pixel_HSV(int panel, int pixel, char * pixel_data){
-    if (DEBUG)
-    {
-        SER_SNPRINTF_COMMENT_PSTR(
-            "PIX: setting pixel %3d on panel %d to HSV 0x%02x%02x%02x",
-            pixel, panel,
-            (uint8_t)pixel_data[0], (uint8_t)pixel_data[1], (uint8_t)pixel_data[2]
-        );
-    }
+    // if (DEBUG)
+    // {
+    //     SER_SNPRINTF_COMMENT_PSTR(
+    //         "PIX: setting pixel %3d on panel %d to HSV 0x%02x%02x%02x",
+    //         pixel, panel,
+    //         (uint8_t)pixel_data[0], (uint8_t)pixel_data[1], (uint8_t)pixel_data[2]
+    //     );
+    // }
     panels[panel][pixel].setHSV(
         (uint8_t)pixel_data[0],
         (uint8_t)pixel_data[1],
@@ -467,35 +467,31 @@ int gcode_M260X()
     char *panel_payload = NULL;
     int panel_payload_len = 0;
 
-    if (DEBUG)
-    {
+    #if DEBUG
         SER_SNPRINTF_COMMENT_PSTR("GCO: Calling M%d", parser.codenum);
-    }
+    #endif
 
     if (parser.seen('Q'))
     {
         panel_number = parser.value_int();
-        if(DEBUG)
-        {
+        #if DEBUG
             SER_SNPRINTF_COMMENT_PSTR("GCO: -> panel_number: %d", panel_number);
-        }
+        #endif
         // TODO: validate panel_number
     }
     if (parser.seen('S'))
     {
         pixel_offset = parser.value_int();
-        if(DEBUG)
-        {
+        #if DEBUG
             SER_SNPRINTF_COMMENT_PSTR("GCO: -> pixel_offset: %d", pixel_offset);
-        }
+        #endif
         // TODO: validate pixel_offset
     }
     if (parser.seen('V'))
     {
         panel_payload = parser.value_ptr;
         panel_payload_len = parser.arg_str_len;
-        if (DEBUG)
-        {
+        #if DEBUG
             STRNCPY_PSTR(
                 fmt_buffer, "%cGCO: -> payload: (%d) '%%n%%%ds'", BUFFLEN_FMT);
             snprintf(
@@ -509,13 +505,13 @@ int gcode_M260X()
                 msg_buffer + msg_offset, panel_payload,
                 MIN(BUFFLEN_MSG - msg_offset, panel_payload_len));
             SERIAL_OBJ.println(msg_buffer);
-        }
+        #endif
 
         // TODO: validate panel_payload_len is multiple of 4 (4 bytes encoded per 3 pixels (RGB))
         // TODO: validate panel_payload is base64
     }
 
-    if(DEBUG){
+    #if DEBUG
         char fake_panel[panel_info[panel_number]];
         int dec_len = base64_decode(fake_panel, panel_payload, panel_payload_len);
         STRNCPY_PSTR(
@@ -535,7 +531,7 @@ int gcode_M260X()
             );
         }
         SERIAL_OBJ.println(msg_buffer);
-    }
+    #endif
 
     char pixel_data[3];
 
@@ -570,10 +566,9 @@ int gcode_M260X()
 }
 
 int gcode_M2610() {
-    if (DEBUG)
-    {
+    #if DEBUG
         SER_SNPRINT_COMMENT_PSTR("GCO: Calling M2610");
-    }
+    #endif
     // TODO: This
     FastLED.show();
     return 0;
@@ -605,6 +600,7 @@ int process_parsed_command() {
         case 2600:
         case 2601:
         case 2602:
+        case 2603:
             return gcode_M260X();
         case 2610:
             return gcode_M2610();
@@ -636,9 +632,9 @@ int process_next_command()
     char *const current_command = command_queue[cmd_queue_index_r];
 
     parser.parse(current_command);
-    if(DEBUG){
+    #if DEBUG
         parser.debug();
-    }
+    #endif
     return process_parsed_command();
 }
 
@@ -649,19 +645,17 @@ int process_next_command()
 void setup()
 {
     // initialize serial
-    if (DEBUG)
-    {
+    #if DEBUG
         blink();
-    }
+    #endif
     SERIAL_OBJ.begin(SERIAL_BAUD);
 
     SER_SNPRINTF_MSG("\n");
-    if (DEBUG)
-    {
+    #if DEBUG
         SER_SNPRINTF_COMMENT_PSTR("SET: detected board: %s", DETECTED_BOARD);
         SER_SNPRINTF_COMMENT_PSTR("SET: sram size: %d", SRAM_SIZE);
         SER_SNPRINTF_COMMENT_PSTR("SET: Free SRAM %d", getFreeSram());
-    }
+    #endif
 
     // Clear out buffer
     msg_buffer[0] = '\0';
@@ -689,14 +683,13 @@ void setup()
         SER_SNPRINT_COMMENT_PSTR("SET: Panel Setup: OK");
     }
 
-    if (DEBUG)
-    {
+    #if DEBUG
         SER_SNPRINTF_COMMENT_PSTR("SET: pixel_count: %d, panel_count: %d", pixel_count, panel_count);
         for (int p = 0; p < panel_count; p++)
         {
             SER_SNPRINTF_COMMENT_PSTR("SET: -> panel %d len %d", p, panel_info[p]);
         }
-    }
+    #endif
 
     error_code = init_queue();
     if (error_code)
@@ -716,10 +709,7 @@ void setup()
 
 void loop()
 {
-    if (DEBUG)
-    {
-        blink();
-    }
+    blink();
 
     // int hue = 0;
     // for (int i = 0; i < 255; i+=10)
@@ -734,23 +724,22 @@ void loop()
     //     }
     //     FastLED.show();
     // }
-    if (DEBUG)
-    {
+    #if DEBUG
         // TODO: limit rate of sending debug prints
         SER_SNPRINTF_COMMENT_PSTR("LOO: Free SRAM %d", getFreeSram());
         // SER_SNPRINTF_COMMENT_PSTR("LOO: queue_length %d", queue_length());
         // SER_SNPRINTF_COMMENT_PSTR("LOO: cmd_queue_index_r %d", cmd_queue_index_r);
         // SER_SNPRINTF_COMMENT_PSTR("LOO: cmd_queue_index_w %d", cmd_queue_index_w);
         // TODO: time since start and bytes written to LEDs
-    }
+    #endif
 
     if (queue_length() < MAX_QUEUE_LEN) {
         get_available_commands();
     }
     if (queue_length()){
-        if (DEBUG) {
+        #if DEBUG
             SER_SNPRINTF_COMMENT_PSTR("LOO: Next command: '%s'", command_queue[cmd_queue_index_r]);
-        }
+        #endif
         error_code = process_next_command();
         if (error_code)
         {

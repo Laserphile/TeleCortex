@@ -99,14 +99,13 @@ void GCodeParser::parse(char *p)
 
         const bool has_arg = HAS_ARG(p);
 
-        if (DEBUG)
-        {
+        #if DEBUG
             SER_SNPRINTF_COMMENT_PSTR(
                 "PAR: Got letter %c at index %d ,has_arg: %d",
                 code,
                 (int)(p - command_ptr - 1),
                 has_arg);
-        }
+        #endif
 
         while(HAS_ARG(p))
             p++;
@@ -158,17 +157,17 @@ void GCodeParser::debug()
                     // );
                     // SERIAL_OBJ.println(msg_buffer);
                 }
-                if(HAS_NUM(value_ptr)){
-                    SER_SNPRINTF_COMMENT_PSTR("PAD: ->  float: %f", value_float());
-                    SER_SNPRINTF_COMMENT_PSTR("PAD: ->   long: %d", value_long());
-                    SER_SNPRINTF_COMMENT_PSTR("PAD: ->  ulong: %d", value_ulong());
-                    // SER_SNPRINTF_COMMENT_PSTR("PAD: -> millis: %d", value_millis());
-                    // SER_SNPRINTF_COMMENT_PSTR("PAD: -> sec-ms: %d", value_millis_from_seconds());
-                    SER_SNPRINTF_COMMENT_PSTR("PAD: ->    int: %d", value_int());
-                    SER_SNPRINTF_COMMENT_PSTR("PAD: -> ushort: %d", value_ushort());
-                    SER_SNPRINTF_COMMENT_PSTR("PAD: ->   byte: %d", (int)value_byte());
-                    SER_SNPRINTF_COMMENT_PSTR("PAD: ->   bool: %d", (int)value_bool());
-                }
+                // if(HAS_NUM(value_ptr)){
+                //     SER_SNPRINTF_COMMENT_PSTR("PAD: ->  float: %f", value_float());
+                //     SER_SNPRINTF_COMMENT_PSTR("PAD: ->   long: %d", value_long());
+                //     SER_SNPRINTF_COMMENT_PSTR("PAD: ->  ulong: %d", value_ulong());
+                //     // SER_SNPRINTF_COMMENT_PSTR("PAD: -> millis: %d", value_millis());
+                //     // SER_SNPRINTF_COMMENT_PSTR("PAD: -> sec-ms: %d", value_millis_from_seconds());
+                //     SER_SNPRINTF_COMMENT_PSTR("PAD: ->    int: %d", value_int());
+                //     SER_SNPRINTF_COMMENT_PSTR("PAD: -> ushort: %d", value_ushort());
+                //     SER_SNPRINTF_COMMENT_PSTR("PAD: ->   byte: %d", (int)value_byte());
+                //     SER_SNPRINTF_COMMENT_PSTR("PAD: ->   bool: %d", (int)value_bool());
+                // }
             }
             else
             {
