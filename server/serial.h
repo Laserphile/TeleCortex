@@ -50,7 +50,11 @@ extern char err_buffer[BUFFLEN_ERR];
     strncpy_P((buff), PSTR(static_str), (size));
 #endif
 
-// copy fmt string from progmem to fmt_buffer, snprintf to output buffer
+// copy message from progmem to message buffer
+#define STRNCPY_MSG_PSTR(static_str)             \
+    STRNCPY_PSTR(msg_buffer, static_str, BUFFLEN_MSG);
+
+// copy fmt string from progmem to fmt_buffer, snprintf to message buffer
 #define SNPRINTF_MSG_PSTR(fmt_str, ...)             \
     STRNCPY_PSTR(fmt_buffer, fmt_str, BUFFLEN_FMT); \
     SNPRINTF_MSG(fmt_buffer, __VA_ARGS__);

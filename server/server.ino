@@ -26,6 +26,10 @@ extern void *__brkval;
  * Req: Serial
  */
 
+#ifndef DEBUG
+#define DEBUG 0
+#endif
+
 #if DEBUG
 #define NO_REQUIRE_CHECKSUM 1
 #endif
@@ -173,6 +177,10 @@ bool queue_full = false;
  * Stub for when queue is rewritten to be more sophisticated w dynamic allocation
  */
 int init_queue(){
+    if(!command_queue){
+        STRNCPY_MSG_PSTR("malloc failed for COMMAND_QUEUE");
+        return 002;
+    }
     return 0;
 }
 
@@ -295,7 +303,7 @@ int validate_serial_special_fields(char *command)
     }
     #ifndef NO_REQUIRE_CHECKSUM
     else {
-        SNPRINTF_MSG_PSTR("Checksum missing");
+        STRNCPY_MSG_PSTR("Checksum missing");
         return 19;
     }
     #endif
@@ -315,14 +323,13 @@ void get_serial_commands()
 
     // TODO: watch for idle serial, might indicate that an "OK" response was missed by client. Send "IDLE".
 
-    // The character currently being read from serial
-    char serial_char;
     // The index of the character in the line being read from serial.
     int serial_count = 0;
 
     while ((queue_length() < MAX_QUEUE_LEN) && (SERIAL_OBJ.available() > 0))
     {
-        serial_char = SERIAL_OBJ.read();
+        // The character currently being read from serial
+        char serial_char = SERIAL_OBJ.read();
         // if (DEBUG) { SER_SNPRINTF_COMMENT_PSTR("GSC: serial char is: %c (%02x)", serial_char, serial_char); }
         if (IS_EOL(serial_char))
         {
@@ -446,11 +453,18 @@ int set_panel_HSV(int panel, char * pixel_data) {
     return 0;
 }
 
+/**
+ * Good test codes:
+ * M2602 Q1 V/wAA
+ * M2610
+ */
+
+
 int gcode_M260X()
 {
     int panel_number = 0;
     int pixel_offset = 0;
-    char *panel_payload;
+    char *panel_payload = NULL;
     int panel_payload_len = 0;
 
     if (DEBUG)
@@ -558,7 +572,7 @@ int gcode_M260X()
 int gcode_M2610() {
     if (DEBUG)
     {
-        SER_SNPRINT_COMMENT_PSTR("GCO: Calling M2600");
+        SER_SNPRINT_COMMENT_PSTR("GCO: Calling M2610");
     }
     // TODO: This
     FastLED.show();
