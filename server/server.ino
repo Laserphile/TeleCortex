@@ -633,7 +633,6 @@ long long int commands_processed = 0;
 void process_next_command()
 {
     char *const current_command = command_queue[cmd_queue_index_r];
-    int response = 0;
 
     parser.parse(current_command);
     #if DEBUG
