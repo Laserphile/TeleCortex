@@ -70,6 +70,11 @@ extern char err_buffer[BUFFLEN_ERR];
     STRNCPY_PSTR(fmt_buffer, fmt_str, BUFFLEN_FMT); \
     SER_SNPRINTF_MSG(fmt_buffer, __VA_ARGS__);
 
+// copy a message string from progmem to msg_buffer, print msg_buffer
+#define SER_SNPRINT_PSTR(static_str)         \
+    STRNCPY_PSTR(msg_buffer, static_str, BUFFLEN_MSG); \
+    SERIAL_OBJ.println(msg_buffer);
+
 // copy fmt string from progmem to fmt_buffer, snptintf to output buffer as a comment then println to serial
 #define SER_SNPRINTF_COMMENT_PSTR(fmt_str, ...)             \
     *fmt_buffer = COMMENT_PREFIX;                           \

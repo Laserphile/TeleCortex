@@ -716,10 +716,10 @@ void setup()
 
 void loop()
 {
-    if (DEBUG)
-    {
-        blink();
-    }
+    // if (DEBUG)
+    // {
+    //     blink();
+    // }
 
     // int hue = 0;
     // for (int i = 0; i < 255; i+=10)
@@ -736,11 +736,12 @@ void loop()
     // }
     if (DEBUG)
     {
+        // TODO: limit rate of sending debug prints
         SER_SNPRINTF_COMMENT_PSTR("LOO: Free SRAM %d", getFreeSram());
-        SER_SNPRINTF_COMMENT_PSTR("LOO: queue_length %d", queue_length());
-        SER_SNPRINTF_COMMENT_PSTR("LOO: cmd_queue_index_r %d", cmd_queue_index_r);
-        SER_SNPRINTF_COMMENT_PSTR("LOO: cmd_queue_index_w %d", cmd_queue_index_w);
-        // TODO: time since start and bytes written
+        // SER_SNPRINTF_COMMENT_PSTR("LOO: queue_length %d", queue_length());
+        // SER_SNPRINTF_COMMENT_PSTR("LOO: cmd_queue_index_r %d", cmd_queue_index_r);
+        // SER_SNPRINTF_COMMENT_PSTR("LOO: cmd_queue_index_w %d", cmd_queue_index_w);
+        // TODO: time since start and bytes written to LEDs
     }
 
     if (queue_length() < MAX_QUEUE_LEN) {
@@ -759,5 +760,8 @@ void loop()
             stop();
         }
         queue_advance_read();
+    } else {
+        // TODO: limit rate of sending IDLE
+        SER_SNPRINT_PSTR("IDLE");
     }
 }
