@@ -716,10 +716,10 @@ void setup()
 
 void loop()
 {
-    // if (DEBUG)
-    // {
-    //     blink();
-    // }
+    if (DEBUG)
+    {
+        blink();
+    }
 
     // int hue = 0;
     // for (int i = 0; i < 255; i+=10)
