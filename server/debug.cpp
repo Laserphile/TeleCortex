@@ -9,10 +9,6 @@
  * Req: Serial
  */
 
-#ifndef DEBUG
-#define DEBUG 0
-#endif
-
 int error_code = 0;
 
 int getFreeSram()

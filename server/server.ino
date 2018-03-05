@@ -20,7 +20,7 @@
 #define MAX_CMD_SIZE 512
 
 // Number of commands in the queue
-#define MAX_QUEUE_LEN 1
+#define MAX_QUEUE_LEN 2
 
 /**
  * GCode Command Queue
@@ -435,7 +435,7 @@ void loop()
 
     time_t t_now = now();
 
-    #if DEBUG
+    #if DEBUG_LOOP
         if (t_now - last_loop_debug > LOOP_DEBUG_PERIOD){
             SER_SNPRINTF_COMMENT_PSTR("LOO: Free SRAM %d", getFreeSram());
             // SER_SNPRINTF_COMMENT_PSTR("LOO: queue_length %d", queue_length());

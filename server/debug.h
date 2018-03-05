@@ -3,6 +3,14 @@
 
 #include <Arduino.h>
 
+#ifndef DEBUG
+#define DEBUG 0
+#endif
+
+#ifndef DEBUG_LOOP
+#define DEBUG_LOOP DEBUG
+#endif
+
 extern unsigned int __bss_end;
 extern unsigned int __heap_start;
 extern void *__brkval;
