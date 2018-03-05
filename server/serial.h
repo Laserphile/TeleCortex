@@ -1,10 +1,18 @@
 #ifndef __SERIAL_H__
 #define __SERIAL_H__
 
+#include <Arduino.h>
+
 // Length of various buffer
 #define BUFFLEN_MSG 256
-#define BUFFLEN_ERR 8
+#define BUFFLEN_ERR 16
 #define BUFFLEN_FMT 128
+
+// Definition of special serial control characters
+#define COMMENT_PREFIX ';'
+#define ESCAPE_PREFIX '\\'
+#define LINENUM_PREFIX 'N'
+#define CHECKSUM_PREFIX '*'
 
 // Serial out Buffer
 extern char msg_buffer[BUFFLEN_MSG];

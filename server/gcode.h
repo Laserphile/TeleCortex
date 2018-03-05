@@ -1,15 +1,13 @@
 #ifndef __GCODE_H__
 #define __GCODE_H__
 
-#include "macros.h"
+#include <Arduino.h>
+
+#include "panel.h"
 #include "config.h"
 #include "types.h"
 #include "serial.h"
-
-#define COMMENT_PREFIX ';'
-#define ESCAPE_PREFIX '\\'
-#define LINENO_PREFIX 'N'
-#define CHECKSUM_PREFIX '*'
+#include "macros.h"
 
 /**
  * GCode parser
@@ -34,6 +32,7 @@ class GCodeParser
     static int codenum;             // Number following command letter
     static char *value_ptr;         // Start of the current argument value string
     static int arg_str_len;         // Length of the current argument value string
+    static long linenum;            // Line number of command if provided
 
 #if DEBUG
     void debug();
@@ -162,7 +161,7 @@ class GCodeParser
         return !has_value() || value_byte();
     }
 
-    void unknown_command_error();
+    int unknown_command_error();
 
     // Provide simple value accessors with default option
     FORCE_INLINE static float floatval(const char c, const float dval = 0.0)
@@ -196,5 +195,12 @@ class GCodeParser
 };
 
 extern GCodeParser parser;
+
+int gcode_M260X();
+
+int gcode_M2610();
+
+int gcode_M2611();
+
 
 #endif /* __GCODE_H__ */

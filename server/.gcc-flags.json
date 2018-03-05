@@ -1,0 +1,8 @@
+{
+    "execPath": "/Applications/Arduino.app/Contents/Java/hardware/tools/avr/bin/avr-gcc",
+    "gccDefaultCFlags": "-c -Wall",
+    "gccDefaultCppFlags": "-c -Wall -std=c++11",
+    "gccErrorLimit": 15,
+    "gccIncludePaths": "/Users/derwent/Library/Arduino15/packages/arduino/hardware/samd/1.6.17/cores/arduino,\n  /Applications/Arduino.app/Contents/Java/hardware/arduino/avr/cores/arduino/,./*",
+    "gccSuppressWarnings": true
+}

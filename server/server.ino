@@ -1,157 +1,28 @@
 #include <Arduino.h>
-#include <FastLED.h>
+#include <TimeLib.h>
 
 #include "config.h"
-#include "macros.h"
+#include "clock.h"
 #include "gcode.h"
+#include "panel.h"
+#include "debug.h"
 #include "types.h"
-#include "board_properties.h"
 #include "gcode.h"
 #include "b64.h"
-
-extern unsigned int __bss_end;
-extern unsigned int __heap_start;
-extern void *__brkval;
-
-/**
- * Common
- */
-
-// Macro function to determine if pin is valid.
-// TODO: define MAX_PIN in board_properties.h
-#define VALID_PIN(pin) ((pin) > 0)
-
-/**
- * Debug
- * Req: Serial
- */
-
-#ifndef DEBUG
-#define DEBUG 0
-#endif
-
-// Current error code
-static int error_code = 0;
-
-int getFreeSram()
-{
-    uint8_t newVariable;
-    // heap is empty, use bss as start memory address
-    if ((int)__brkval == 0)
-        return (((int)&newVariable) - ((int)&__bss_end));
-    // use heap end as the start of the memory address
-    else
-        return (((int)&newVariable) - ((int)__brkval));
-};
-
-void print_error(int error_code, char* message) {
-    SER_SNPRINTF_ERR_PSTR("E%03d:", error_code);
-    SERIAL_OBJ.println(message);
-}
-
-void blink()
-{
-    digitalWrite(STATUS_PIN, HIGH); // turn the LED on (HIGH is the voltage level)
-    delay(10);                    // wait for a second
-    digitalWrite(STATUS_PIN, LOW);  // turn the LED off by making the voltage LOW
-}
-
-void stop()
-{
-    while (1) { };
-}
-
-/**
- * Panels
- * req: Serial, Common
- */
-
-// The number of panels, determined by defines, calculated in setup()
-static int panel_count;
-
-// The length of each panel
-static int panel_info[MAX_PANELS];
-
-// the total number of pixels used by panels, determined by defines
-static int pixel_count;
-
-// An array of arrays of pixels, populated in setup()
-CRGB **panels = 0;
-
-/**
- * Macro to initialize a panel
- * This is kind of bullshit but you have to define the pins like this
- * because FastLED.addLeds needs to know the pin numbers at compile time.
- * Panels must be contiguous. The firmware stops defining panels after the
- * first undefined panel.
- */
-
-#define INIT_PANEL(data_pin, clk_pin, len)                                                                                               \
-    SER_SNPRINTF_COMMENT_PSTR("Free SRAM %d", getFreeSram());                                                                            \
-    if (!VALID_PIN((data_pin)) || (len) <= 0)                                                                                            \
-    {                                                                                                                                    \
-        SER_SNPRINTF_COMMENT_PSTR("PANEL_%02d not configured", panel_count);                                                           \
-        return 0;                                                                                                                        \
-    }                                                                                                                                    \
-    SER_SNPRINTF_COMMENT_PSTR("initializing PANEL_%02d, data_pin: %d, clk_pin: %d, len: %d", panel_count, (data_pin), (clk_pin), (len)); \
-    panel_info[panel_count] = (len);                                                                                                     \
-    pixel_count += (len);                                                                                                                \
-    panels[panel_count] = (CRGB *)malloc((len) * sizeof(CRGB));                                                                          \
-    if (!panels[panel_count])                                                                                                            \
-    {                                                                                                                                    \
-        SNPRINTF_MSG_PSTR("malloc failed for PANEL_%02d", panel_count);                                                                  \
-        return 2;                                                                                                                       \
-    }
-
-int init_panels()
-{
-    panels = (CRGB **)malloc(MAX_PANELS * sizeof(CRGB *));
-    panel_count = 0;
-    pixel_count = 0;
-
-    // This is such bullshit but you gotta do it like this because addLeds needs to know pins at compile time
-    INIT_PANEL(PANEL_00_DATA_PIN, PANEL_00_CLK_PIN, PANEL_00_LEN);
-#if NEEDS_CLK
-    FastLED.addLeds<PANEL_TYPE, PANEL_00_DATA_PIN, PANEL_00_CLK_PIN>(panels[panel_count], PANEL_00_LEN);
-#else
-    FastLED.addLeds<PANEL_TYPE, PANEL_00_DATA_PIN>(panels[panel_count], PANEL_00_LEN);
-#endif
-    panel_count++;
-    INIT_PANEL(PANEL_01_DATA_PIN, PANEL_01_CLK_PIN, PANEL_01_LEN);
-#if NEEDS_CLK
-    FastLED.addLeds<PANEL_TYPE, PANEL_01_DATA_PIN, PANEL_01_CLK_PIN>(panels[panel_count], PANEL_01_LEN);
-#else
-    FastLED.addLeds<PANEL_TYPE, PANEL_01_DATA_PIN>(panels[panel_count], PANEL_01_LEN);
-#endif
-    panel_count++;
-
-    INIT_PANEL(PANEL_02_DATA_PIN, PANEL_02_CLK_PIN, PANEL_02_LEN);
-#if NEEDS_CLK
-    FastLED.addLeds<PANEL_TYPE, PANEL_02_DATA_PIN, PANEL_02_CLK_PIN>(panels[panel_count], PANEL_02_LEN);
-#else
-    FastLED.addLeds<PANEL_TYPE, PANEL_02_DATA_PIN>(panels[panel_count], PANEL_02_LEN);
-#endif
-    panel_count++;
-    INIT_PANEL(PANEL_03_DATA_PIN, PANEL_03_CLK_PIN, PANEL_03_LEN);
-#if NEEDS_CLK
-    FastLED.addLeds<PANEL_TYPE, PANEL_03_DATA_PIN, PANEL_03_CLK_PIN>(panels[panel_count], PANEL_03_LEN);
-#else
-    FastLED.addLeds<PANEL_TYPE, PANEL_03_DATA_PIN>(panels[panel_count], PANEL_03_LEN);
-#endif
-    panel_count++;
-    return 0;
-}
+#include "macros.h"
 
 /**
  * Queue
  * Req: Common, Serial
  */
 
+// TODO: move these to config?
+
 // Maximum command length
 #define MAX_CMD_SIZE 512
 
 // Number of commands in the queue
-#define MAX_QUEUE_LEN 1
+#define MAX_QUEUE_LEN 2
 
 /**
  * GCode Command Queue
@@ -236,7 +107,9 @@ inline bool enqueue_command(const char* cmd) {
     return true;
 }
 
-static long gcode_N, gcode_LastN = 0;
+static long this_linenum = 0; // The linenum of the command being currently parsed
+static long last_linenum = 0; // the last linenum that was parsed
+static long idle_linenum = -1; // the last linenum where an idle was printed
 
 /**
  * Flush serial and command queue then request resend
@@ -248,7 +121,7 @@ void flush_serial_queue_resend() {
 
     SERIAL_OBJ.flush();
     queue_clear();
-    SER_SNPRINTF_MSG_PSTR("RS %s", gcode_LastN);
+    SER_SNPRINTF_MSG_PSTR("RS %s", last_linenum);
 
     #if DEBUG
         SER_SNPRINTF_COMMENT_PSTR("FLU: queue_length: %d", queue_length());
@@ -262,7 +135,7 @@ void flush_serial_queue_resend() {
  */
 int validate_serial_special_fields(char *command)
 {
-    char *npos = (*command == LINENO_PREFIX) ? command : NULL; // Require the N parameter to start the line
+    char *npos = (*command == LINENUM_PREFIX) ? command : NULL; // Require the N parameter to start the line
     if (npos)
     {
         bool M110 = strstr_P(command, PSTR("M110")) != NULL;
@@ -274,11 +147,11 @@ int validate_serial_special_fields(char *command)
                 npos = n2pos;
         }
 
-        gcode_N = strtol(npos + 1, NULL, 10);
+        this_linenum = strtol(npos + 1, NULL, 10);
 
-        if (gcode_N != gcode_LastN + 1 && !M110)
+        if (this_linenum != last_linenum + 1 && !M110)
         {
-            SNPRINTF_MSG_PSTR("Line numbers not sequential. Current: %d, Previous: %d", gcode_N, gcode_LastN);
+            SNPRINTF_MSG_PSTR("Line numbers not sequential. Current: %d, Previous: %d", this_linenum, last_linenum);
             return 10;
         }
     }
@@ -302,7 +175,7 @@ int validate_serial_special_fields(char *command)
     }
     #endif
 
-    gcode_LastN = gcode_N;
+    last_linenum = this_linenum;
     return 0;
 }
 
@@ -397,186 +270,6 @@ void get_available_commands()
     // TODO: maybe read commands off SD card?
 }
 
-int set_panel_pixel_RGB(int panel, int pixel, char * pixel_data){
-    // if (DEBUG)
-    // {
-    //     SER_SNPRINTF_COMMENT_PSTR(
-    //         "PIX: setting pixel %3d on panel %d to RGB 0x%02x%02x%02x",
-    //         pixel, panel,
-    //         (uint8_t)pixel_data[0], (uint8_t)pixel_data[1], (uint8_t)pixel_data[2]
-    //     );
-    // }
-    panels[panel][pixel].setRGB(
-        (uint8_t)pixel_data[0],
-        (uint8_t)pixel_data[1],
-        (uint8_t)pixel_data[2]
-    );
-    return 0;
-}
-
-int set_panel_pixel_HSV(int panel, int pixel, char * pixel_data){
-    // if (DEBUG)
-    // {
-    //     SER_SNPRINTF_COMMENT_PSTR(
-    //         "PIX: setting pixel %3d on panel %d to HSV 0x%02x%02x%02x",
-    //         pixel, panel,
-    //         (uint8_t)pixel_data[0], (uint8_t)pixel_data[1], (uint8_t)pixel_data[2]
-    //     );
-    // }
-    panels[panel][pixel].setHSV(
-        (uint8_t)pixel_data[0],
-        (uint8_t)pixel_data[1],
-        (uint8_t)pixel_data[2]
-    );
-    return 0;
-}
-
-int set_panel_RGB(int panel, char * pixel_data) {
-    for (int pixel = 0; pixel < panel_info[panel]; pixel++)
-    {
-        set_panel_pixel_RGB(panel, pixel, pixel_data);
-    }
-    return 0;
-}
-
-int set_panel_HSV(int panel, char * pixel_data) {
-    for (int pixel = 0; pixel < panel_info[panel]; pixel++)
-    {
-        set_panel_pixel_HSV(panel, pixel, pixel_data);
-    }
-    return 0;
-}
-
-/**
- * Good test codes:
- * M2602 Q1 V/wAA
- * M2610
- */
-
-
-int gcode_M260X()
-{
-    int panel_number = 0;
-    int pixel_offset = 0;
-    char *panel_payload = NULL;
-    int panel_payload_len = 0;
-
-    #if DEBUG
-        SER_SNPRINTF_COMMENT_PSTR("GCO: Calling M%d", parser.codenum);
-    #endif
-
-    if (parser.seen('Q'))
-    {
-        panel_number = parser.value_int();
-        #if DEBUG
-            SER_SNPRINTF_COMMENT_PSTR("GCO: -> panel_number: %d", panel_number);
-        #endif
-        // TODO: validate panel_number
-    }
-    if (parser.seen('S'))
-    {
-        pixel_offset = parser.value_int();
-        #if DEBUG
-            SER_SNPRINTF_COMMENT_PSTR("GCO: -> pixel_offset: %d", pixel_offset);
-        #endif
-        // TODO: validate pixel_offset
-    }
-    if (parser.seen('V'))
-    {
-        panel_payload = parser.value_ptr;
-        panel_payload_len = parser.arg_str_len;
-        #if DEBUG
-            STRNCPY_PSTR(
-                fmt_buffer, "%cGCO: -> payload: (%d) '%%n%%%ds'", BUFFLEN_FMT);
-            snprintf(
-                msg_buffer, BUFFLEN_FMT, fmt_buffer,
-                COMMENT_PREFIX, panel_payload_len, panel_payload_len);
-            strncpy(fmt_buffer, msg_buffer, BUFFLEN_FMT);
-            int msg_offset = 0;
-            snprintf(
-                msg_buffer, BUFFLEN_MSG, fmt_buffer, &msg_offset, "");
-            strncpy(
-                msg_buffer + msg_offset, panel_payload,
-                MIN(BUFFLEN_MSG - msg_offset, panel_payload_len));
-            SERIAL_OBJ.println(msg_buffer);
-        #endif
-
-        // TODO: validate panel_payload_len is multiple of 4 (4 bytes encoded per 3 pixels (RGB))
-        // TODO: validate panel_payload is base64
-    }
-
-    #if DEBUG
-        char fake_panel[panel_info[panel_number]];
-        int dec_len = base64_decode(fake_panel, panel_payload, panel_payload_len);
-        STRNCPY_PSTR(
-            fmt_buffer, "%cGCO: -> decoded payload: (%d) 0x", BUFFLEN_FMT);
-        snprintf(
-            msg_buffer, BUFFLEN_FMT, fmt_buffer,
-            COMMENT_PREFIX, dec_len, dec_len * 2);
-        strncpy(fmt_buffer, msg_buffer, BUFFLEN_FMT);
-        int offset_payload_start = snprintf(
-            msg_buffer, BUFFLEN_MSG, fmt_buffer
-        );
-        for(int i=0; i<dec_len; i++){
-            sprintf(
-                msg_buffer + offset_payload_start + i*2,
-                "%02x",
-                fake_panel[i]
-            );
-        }
-        SERIAL_OBJ.println(msg_buffer);
-    #endif
-
-    char pixel_data[3];
-
-    if( parser.codenum == 2600 || parser.codenum == 2601) {
-        for (int pixel = pixel_offset; pixel < (panel_payload_len / 4); pixel++)
-        {
-            // every 4 bytes of encoded base64 corresponds to a single RGB pixel
-            base64_decode(pixel_data, panel_payload + (pixel * 4), 4);
-            if (parser.codenum == 2600)
-            {
-                set_panel_pixel_RGB(panel_number, pixel, pixel_data);
-            }
-            else if (parser.codenum == 2601)
-            {
-                set_panel_pixel_HSV(panel_number, pixel, pixel_data);
-            }
-        }
-    } else if (parser.codenum == 2602 || parser.codenum == 2603) {
-        base64_decode(pixel_data, panel_payload, 4);
-        if (parser.codenum == 2602)
-        {
-            set_panel_RGB(panel_number, pixel_data);
-        }
-        else if (parser.codenum == 2603)
-        {
-            set_panel_HSV(panel_number, pixel_data);
-        }
-    }
-
-
-    return 0;
-}
-
-int gcode_M2610() {
-    #if DEBUG
-        SER_SNPRINT_COMMENT_PSTR("GCO: Calling M2610");
-    #endif
-    // TODO: This
-    FastLED.show();
-    return 0;
-}
-
-int gcode_M2611() {
-    // TODO: Is this even possible?
-    return 0;
-}
-
-/**
- * GCode
- */
-
 int process_parsed_command() {
     // TODO: this
     switch (parser.command_letter)
@@ -585,8 +278,7 @@ int process_parsed_command() {
         switch (parser.codenum)
         {
         default:
-            parser.unknown_command_error();
-            break;
+            return parser.unknown_command_error();
         }
     case 'M':
         switch (parser.codenum)
@@ -599,19 +291,16 @@ int process_parsed_command() {
         case 2610:
             return gcode_M2610();
         default:
-            parser.unknown_command_error();
-            break;
+            return parser.unknown_command_error();
         }
     case 'P':
         switch (parser.codenum)
         {
         default:
-            parser.unknown_command_error();
-            break;
+            return parser.unknown_command_error();
         }
     default:
-        parser.unknown_command_error();
-        break;
+        return parser.unknown_command_error();
     }
 
     return 0;
@@ -623,20 +312,30 @@ long long int commands_processed = 0;
  * Process Next Command
  * Inspired by Marlin/Marlin_main::process_next_command()
  */
-int process_next_command()
+void process_next_command()
 {
     char *const current_command = command_queue[cmd_queue_index_r];
-    int response = 0;
 
     parser.parse(current_command);
     #if DEBUG
         parser.debug();
     #endif
-    response = process_parsed_command();
-    if(response == 0){
-        commands_processed ++;
+    error_code = process_parsed_command();
+    if(error_code != 0){
+        if(parser.linenum >= 0){
+            print_line_error(parser.linenum, error_code, msg_buffer);
+        } else {
+            print_error(error_code, msg_buffer);
+        }
+        // TODO: flush buffer?
+        // TODO: decrement last_linenum?
+    } else {
+        if(parser.linenum >= 0){
+            print_line_ok(parser.linenum);
+        }
+        commands_processed++;
     }
-    return response;
+    error_code = 0;
 }
 
 /**
@@ -704,6 +403,15 @@ void setup()
     {
         SER_SNPRINT_COMMENT_PSTR("SET: Queue Setup: OK");
     }
+
+    error_code = init_clock();
+    if(error_code){
+        print_error(error_code, msg_buffer);
+        stop();
+    }
+    else{
+        SER_SNPRINT_COMMENT_PSTR("SET: Clock Setup: OK");
+    }
 }
 
 // temporarily store the hue value calculated
@@ -722,19 +430,26 @@ void loop()
                 {
                     hue = (int)(255 * (1.0 + (float)j / (float)panel_info[p]) + i) % 255;
                     panels[p][j].setHSV(hue, 255, 255);
+                    pixels_set ++;
                 }
             }
             FastLED.show();
         }
     }
 
-    #if DEBUG
-        // TODO: limit rate of sending debug prints
-        SER_SNPRINTF_COMMENT_PSTR("LOO: Free SRAM %d", getFreeSram());
-        // SER_SNPRINTF_COMMENT_PSTR("LOO: queue_length %d", queue_length());
-        // SER_SNPRINTF_COMMENT_PSTR("LOO: cmd_queue_index_r %d", cmd_queue_index_r);
-        // SER_SNPRINTF_COMMENT_PSTR("LOO: cmd_queue_index_w %d", cmd_queue_index_w);
-        // TODO: time since start and bytes written to LEDs
+    time_t t_now = now();
+
+    #if DEBUG_LOOP
+        if (t_now - last_loop_debug > LOOP_DEBUG_PERIOD){
+            SER_SNPRINTF_COMMENT_PSTR("LOO: Free SRAM %d", getFreeSram());
+            // SER_SNPRINTF_COMMENT_PSTR("LOO: queue_length %d", queue_length());
+            // SER_SNPRINTF_COMMENT_PSTR("LOO: cmd_queue_index_r %d", cmd_queue_index_r);
+            // SER_SNPRINTF_COMMENT_PSTR("LOO: cmd_queue_index_w %d", cmd_queue_index_w);
+            // TODO: time since start and bytes written to LEDs
+            float pixel_set_rate = (float)(pixels_set) / delta_started();
+            SER_SNPRINTF_COMMENT_PSTR("LOO: Pixel set rate: %f", pixel_set_rate);
+            last_loop_debug = t_now;
+        }
     #endif
 
     if (queue_length() < MAX_QUEUE_LEN) {
@@ -744,17 +459,16 @@ void loop()
         #if DEBUG
             SER_SNPRINTF_COMMENT_PSTR("LOO: Next command: '%s'", command_queue[cmd_queue_index_r]);
         #endif
-        error_code = process_next_command();
-        if (error_code)
-        {
-            // If there was an error, print the error code before the out buffer
-            print_error(error_code, msg_buffer);
-            // In the case of an error, stop execution
-            stop();
-        }
+        process_next_command();
         queue_advance_read();
     } else {
-        // TODO: limit rate of sending IDLE
-        SER_SNPRINT_PSTR("IDLE");
+        #if DEBUG
+
+        #endif
+        if((idle_linenum < this_linenum) || (t_now - last_loop_idle > LOOP_IDLE_PERIOD)){
+            SER_SNPRINT_PSTR("IDLE");
+            last_loop_idle = t_now;
+            idle_linenum = this_linenum;
+        }
     }
 }
