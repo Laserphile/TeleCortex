@@ -2,10 +2,10 @@
 #define __CONFIG_H__
 
 #define DEBUG 1
+#define DEBUG_PANEL 0
 #define NO_REQUIRE_CHECKSUM 1
 /* Display rainbows until receive GCode */
 #define RAINBOWS_UNTIL_GCODE 1
-#define STATUS_PIN 13
 
 #include "panel_config.h"
 #include "board_properties.h"

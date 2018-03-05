@@ -17,6 +17,7 @@
     #define PANEL_03_CLK_PIN 0
     #define PANEL_03_LEN 333
     #define MAX_PANELS 4
+    #define STATUS_PIN 13
 #else // Matt's Live Setup on Teensy 3.2
     #define PANEL_TYPE APA102
     #define NEEDS_CLK 1
@@ -33,6 +34,7 @@
     #define PANEL_03_CLK_PIN 14
     #define PANEL_03_LEN 333
     #define MAX_PANELS 4
+    #define STATUS_PIN 3
 #endif
 
 #endif // __PANEL_CONFIG_H__
