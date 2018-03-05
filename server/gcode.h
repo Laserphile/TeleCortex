@@ -1,6 +1,8 @@
 #ifndef __GCODE_H__
 #define __GCODE_H__
 
+#include <Arduino.h>
+
 #include "macros.h"
 #include "config.h"
 #include "types.h"

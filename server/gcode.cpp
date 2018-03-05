@@ -1,5 +1,3 @@
-#include <Arduino.h>
-
 #include "gcode.h"
 #include "panel.h"
 

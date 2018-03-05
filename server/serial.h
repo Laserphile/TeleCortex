@@ -1,6 +1,8 @@
 #ifndef __SERIAL_H__
 #define __SERIAL_H__
 
+#include <Arduino.h>
+
 // Length of various buffer
 #define BUFFLEN_MSG 256
 #define BUFFLEN_ERR 16

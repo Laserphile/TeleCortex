@@ -1,5 +1,5 @@
 #include <Arduino.h>
-#include <FastLED.h>
+#include <TimeLib.h>
 
 #include "config.h"
 #include "macros.h"
@@ -423,13 +423,18 @@ void loop()
         }
     }
 
+    time_t t_now = now();
+
     #if DEBUG
-        // TODO: limit rate of sending debug prints
-        SER_SNPRINTF_COMMENT_PSTR("LOO: Free SRAM %d", getFreeSram());
-        // SER_SNPRINTF_COMMENT_PSTR("LOO: queue_length %d", queue_length());
-        // SER_SNPRINTF_COMMENT_PSTR("LOO: cmd_queue_index_r %d", cmd_queue_index_r);
-        // SER_SNPRINTF_COMMENT_PSTR("LOO: cmd_queue_index_w %d", cmd_queue_index_w);
-        // TODO: time since start and bytes written to LEDs
+        if (t_now - last_loop_debug > LOOP_DEBUG_PERIOD){
+            // TODO: limit rate of sending debug prints
+            SER_SNPRINTF_COMMENT_PSTR("LOO: Free SRAM %d", getFreeSram());
+            // SER_SNPRINTF_COMMENT_PSTR("LOO: queue_length %d", queue_length());
+            // SER_SNPRINTF_COMMENT_PSTR("LOO: cmd_queue_index_r %d", cmd_queue_index_r);
+            // SER_SNPRINTF_COMMENT_PSTR("LOO: cmd_queue_index_w %d", cmd_queue_index_w);
+            // TODO: time since start and bytes written to LEDs
+            last_loop_debug = t_now;
+        }
     #endif
 
     if (queue_length() < MAX_QUEUE_LEN) {
@@ -443,6 +448,9 @@ void loop()
         queue_advance_read();
     } else {
         // TODO: limit rate of sending IDLE
-        SER_SNPRINT_PSTR("IDLE");
+        if (t_now - last_loop_idle > LOOP_IDLE_PERIOD){
+            SER_SNPRINT_PSTR("IDLE");
+            last_loop_idle = t_now;
+        }
     }
 }
