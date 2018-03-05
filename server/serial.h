@@ -6,6 +6,12 @@
 #define BUFFLEN_ERR 16
 #define BUFFLEN_FMT 128
 
+// Definition of special serial control characters
+#define COMMENT_PREFIX ';'
+#define ESCAPE_PREFIX '\\'
+#define LINENUM_PREFIX 'N'
+#define CHECKSUM_PREFIX '*'
+
 // Serial out Buffer
 extern char msg_buffer[BUFFLEN_MSG];
 

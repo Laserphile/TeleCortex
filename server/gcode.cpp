@@ -1,6 +1,7 @@
 #include <Arduino.h>
 
 #include "gcode.h"
+#include "panel.h"
 
 // Must be declared for allocation and to satisfy the linker
 // Zero values need no initialization.
@@ -183,3 +184,132 @@ void GCodeParser::debug()
     }
 }
 #endif
+
+/**
+ * GCode functions
+ */
+
+/**
+ * Good test codes:
+ * M2602 Q1 V/wAA
+ * M2610
+ */
+
+int gcode_M260X()
+{
+    int panel_number = 0;
+    int pixel_offset = 0;
+    char *panel_payload = NULL;
+    int panel_payload_len = 0;
+
+    #if DEBUG
+        SER_SNPRINTF_COMMENT_PSTR("GCO: Calling M%d", parser.codenum);
+    #endif
+
+    if (parser.seen('Q'))
+    {
+        panel_number = parser.value_int();
+        #if DEBUG
+            SER_SNPRINTF_COMMENT_PSTR("GCO: -> panel_number: %d", panel_number);
+        #endif
+        // TODO: validate panel_number
+    }
+    if (parser.seen('S'))
+    {
+        pixel_offset = parser.value_int();
+        #if DEBUG
+            SER_SNPRINTF_COMMENT_PSTR("GCO: -> pixel_offset: %d", pixel_offset);
+        #endif
+        // TODO: validate pixel_offset
+    }
+    if (parser.seen('V'))
+    {
+        panel_payload = parser.value_ptr;
+        panel_payload_len = parser.arg_str_len;
+        #if DEBUG
+            STRNCPY_PSTR(
+                fmt_buffer, "%cGCO: -> payload: (%d) '%%n%%%ds'", BUFFLEN_FMT);
+            snprintf(
+                msg_buffer, BUFFLEN_FMT, fmt_buffer,
+                COMMENT_PREFIX, panel_payload_len, panel_payload_len);
+            strncpy(fmt_buffer, msg_buffer, BUFFLEN_FMT);
+            int msg_offset = 0;
+            snprintf(
+                msg_buffer, BUFFLEN_MSG, fmt_buffer, &msg_offset, "");
+            strncpy(
+                msg_buffer + msg_offset, panel_payload,
+                MIN(BUFFLEN_MSG - msg_offset, panel_payload_len));
+            SERIAL_OBJ.println(msg_buffer);
+        #endif
+
+        // TODO: validate panel_payload_len is multiple of 4 (4 bytes encoded per 3 pixels (RGB))
+        // TODO: validate panel_payload is base64
+    }
+
+    #if DEBUG
+        char fake_panel[panel_info[panel_number]];
+        int dec_len = base64_decode(fake_panel, panel_payload, panel_payload_len);
+        STRNCPY_PSTR(
+            fmt_buffer, "%cGCO: -> decoded payload: (%d) 0x", BUFFLEN_FMT);
+        snprintf(
+            msg_buffer, BUFFLEN_FMT, fmt_buffer,
+            COMMENT_PREFIX, dec_len, dec_len * 2);
+        strncpy(fmt_buffer, msg_buffer, BUFFLEN_FMT);
+        int offset_payload_start = snprintf(
+            msg_buffer, BUFFLEN_MSG, fmt_buffer
+        );
+        for(int i=0; i<dec_len; i++){
+            sprintf(
+                msg_buffer + offset_payload_start + i*2,
+                "%02x",
+                fake_panel[i]
+            );
+        }
+        SERIAL_OBJ.println(msg_buffer);
+    #endif
+
+    char pixel_data[3];
+
+    if( parser.codenum == 2600 || parser.codenum == 2601) {
+        for (int pixel = pixel_offset; pixel < (panel_payload_len / 4); pixel++)
+        {
+            // every 4 bytes of encoded base64 corresponds to a single RGB pixel
+            base64_decode(pixel_data, panel_payload + (pixel * 4), 4);
+            if (parser.codenum == 2600)
+            {
+                set_panel_pixel_RGB(panel_number, pixel, pixel_data);
+            }
+            else if (parser.codenum == 2601)
+            {
+                set_panel_pixel_HSV(panel_number, pixel, pixel_data);
+            }
+        }
+    } else if (parser.codenum == 2602 || parser.codenum == 2603) {
+        base64_decode(pixel_data, panel_payload, 4);
+        if (parser.codenum == 2602)
+        {
+            set_panel_RGB(panel_number, pixel_data);
+        }
+        else if (parser.codenum == 2603)
+        {
+            set_panel_HSV(panel_number, pixel_data);
+        }
+    }
+
+
+    return 0;
+}
+
+int gcode_M2610() {
+    #if DEBUG
+        SER_SNPRINT_COMMENT_PSTR("GCO: Calling M2610");
+    #endif
+    // TODO: This
+    FastLED.show();
+    return 0;
+}
+
+int gcode_M2611() {
+    // TODO: Is this even possible?
+    return 0;
+}

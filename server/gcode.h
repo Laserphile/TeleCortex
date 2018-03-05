@@ -6,11 +6,6 @@
 #include "types.h"
 #include "serial.h"
 
-#define COMMENT_PREFIX ';'
-#define ESCAPE_PREFIX '\\'
-#define LINENUM_PREFIX 'N'
-#define CHECKSUM_PREFIX '*'
-
 /**
  * GCode parser
  *
@@ -197,5 +192,12 @@ class GCodeParser
 };
 
 extern GCodeParser parser;
+
+int gcode_M260X();
+
+int gcode_M2610();
+
+int gcode_M2611();
+
 
 #endif /* __GCODE_H__ */

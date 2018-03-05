@@ -1,5 +1,5 @@
-#ifndef CONFIG_H
-#define CONFIG_H
+#ifndef __CONFIG_H__
+#define __CONFIG_H__
 
 #define DEBUG 1
 #define NO_REQUIRE_CHECKSUM 1
@@ -8,5 +8,6 @@
 #define STATUS_PIN 13
 
 #include "panel_config.h"
+#include "board_properties.h"
 
-#endif
+#endif /* __CONFIG_H__ */
