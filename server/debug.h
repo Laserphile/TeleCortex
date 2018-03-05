@@ -2,6 +2,7 @@
 #define __DEBUG_H__
 
 #include <Arduino.h>
+#include "config.h"
 
 #ifndef DEBUG
 #define DEBUG 0
