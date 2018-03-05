@@ -16,6 +16,9 @@ int panel_info[MAX_PANELS];
 // the total number of pixels used by panels, determined by defines
 int pixel_count = 0;
 
+// The number of pixels that have been set
+int pixels_set = 0;
+
 CRGB **panels = NULL;
 
 int init_panels()
@@ -71,6 +74,7 @@ int set_panel_pixel_RGB(int panel, int pixel, char * pixel_data){
         (uint8_t)pixel_data[1],
         (uint8_t)pixel_data[2]
     );
+    pixels_set++;
     return 0;
 }
 
@@ -88,6 +92,7 @@ int set_panel_pixel_HSV(int panel, int pixel, char * pixel_data){
         (uint8_t)pixel_data[1],
         (uint8_t)pixel_data[2]
     );
+    pixels_set++;
     return 0;
 }
 

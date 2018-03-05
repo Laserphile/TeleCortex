@@ -3,10 +3,11 @@
 
 #include <Arduino.h>
 
-#include "macros.h"
+#include "panel.h"
 #include "config.h"
 #include "types.h"
 #include "serial.h"
+#include "macros.h"
 
 /**
  * GCode parser

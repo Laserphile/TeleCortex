@@ -2,7 +2,6 @@
 #include <TimeLib.h>
 
 #include "config.h"
-#include "macros.h"
 #include "clock.h"
 #include "gcode.h"
 #include "panel.h"
@@ -10,6 +9,7 @@
 #include "types.h"
 #include "gcode.h"
 #include "b64.h"
+#include "macros.h"
 
 /**
  * Queue
@@ -399,6 +399,15 @@ void setup()
     {
         SER_SNPRINT_COMMENT_PSTR("SET: Queue Setup: OK");
     }
+
+    error_code = init_clock();
+    if(error_code){
+        print_error(error_code, msg_buffer);
+        stop();
+    }
+    else{
+        SER_SNPRINT_COMMENT_PSTR("SET: Clock Setup: OK");
+    }
 }
 
 // temporarily store the hue value calculated
@@ -417,6 +426,7 @@ void loop()
                 {
                     hue = (int)(255 * (1.0 + (float)j / (float)panel_info[p]) + i) % 255;
                     panels[p][j].setHSV(hue, 255, 255);
+                    pixels_set ++;
                 }
             }
             FastLED.show();
@@ -427,12 +437,13 @@ void loop()
 
     #if DEBUG
         if (t_now - last_loop_debug > LOOP_DEBUG_PERIOD){
-            // TODO: limit rate of sending debug prints
             SER_SNPRINTF_COMMENT_PSTR("LOO: Free SRAM %d", getFreeSram());
             // SER_SNPRINTF_COMMENT_PSTR("LOO: queue_length %d", queue_length());
             // SER_SNPRINTF_COMMENT_PSTR("LOO: cmd_queue_index_r %d", cmd_queue_index_r);
             // SER_SNPRINTF_COMMENT_PSTR("LOO: cmd_queue_index_w %d", cmd_queue_index_w);
             // TODO: time since start and bytes written to LEDs
+            float pixel_set_rate = (float)(pixels_set) / delta_started();
+            SER_SNPRINTF_COMMENT_PSTR("LOO: Pixel set rate: %f", pixel_set_rate);
             last_loop_debug = t_now;
         }
     #endif

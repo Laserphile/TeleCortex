@@ -1,5 +1,4 @@
 #include "gcode.h"
-#include "panel.h"
 
 // Must be declared for allocation and to satisfy the linker
 // Zero values need no initialization.

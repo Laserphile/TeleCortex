@@ -19,6 +19,8 @@ extern int panel_info[MAX_PANELS];
 // the total number of pixels used by panels, determined by defines
 extern int pixel_count;
 
+extern int pixels_set;
+
 // An array of arrays of pixels, populated in setup()
 extern CRGB **panels;
 
