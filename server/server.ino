@@ -34,20 +34,35 @@
  * command and hands off execution to individual handler functions.
  */
 
-static uint8_t cmd_queue_index_r = 0, // Ring buffer read position
-    cmd_queue_index_w = 0;            // Ring buffer write position
+static uint8_t cmd_queue_index_r, // Ring buffer read position
+    cmd_queue_index_w;            // Ring buffer write position
 char command_queue[MAX_QUEUE_LEN][MAX_CMD_SIZE];
-bool queue_full = false;
+bool queue_full;
+static long this_linenum; // The linenum of the command being currently parsed
+static long last_linenum; // the last linenum that was parsed
+static long idle_linenum; // the last linenum where an idle was printed
+
+void sw_reset(){
+    #if defined(__MK20DX128__) || defined(__MK20DX256__)
+    init_clock();
+    init_queue();
+    #else
+    // Restarts program from beginning but does not reset the peripherals and registers
+    asm volatile ("  jmp 0");
+    #endif
+}
 
 /**
  * Init Queue
  * Stub for when queue is rewritten to be more sophisticated w dynamic allocation
  */
 int init_queue(){
-    if(!command_queue){
-        STRNCPY_MSG_PSTR("malloc failed for COMMAND_QUEUE");
-        return 002;
-    }
+    cmd_queue_index_r = 0;
+    cmd_queue_index_w = 0;
+    queue_full = false;
+    this_linenum = 0;
+    last_linenum = 0;
+    idle_linenum = -1;
     return 0;
 }
 
@@ -107,10 +122,6 @@ inline bool enqueue_command(const char* cmd) {
     return true;
 }
 
-static long this_linenum = 0; // The linenum of the command being currently parsed
-static long last_linenum = 0; // the last linenum that was parsed
-static long idle_linenum = -1; // the last linenum where an idle was printed
-
 /**
  * Flush serial and command queue then request resend
  */
@@ -139,6 +150,11 @@ int validate_serial_special_fields(char *command)
     if (npos)
     {
         bool M110 = strstr_P(command, PSTR("M110")) != NULL;
+        //
+        // #if DEBUG
+        //     SER_SNPRINTF_COMMENT_PSTR("command: %s", command);
+        //     SER_SNPRINTF_COMMENT_PSTR("M110: %d", M110);
+        // #endif
 
         if (M110)
         {
@@ -267,7 +283,7 @@ void get_serial_commands()
 void get_available_commands()
 {
     get_serial_commands();
-    // TODO: maybe read commands off SD card?
+    // TODO: maybe read commands off SD card or other sources?
 }
 
 /**
@@ -312,6 +328,8 @@ int process_parsed_command() {
             return gcode_M260X();
         case 2610:
             return gcode_M2610();
+        case 9999:
+            sw_reset();
         default:
             return parser.unknown_command_error();
         }
