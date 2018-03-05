@@ -12,6 +12,10 @@
 #define DEBUG_LOOP DEBUG
 #endif
 
+#ifndef DEBUG_PANEL
+#define DEBUG_PANEL DEBUG
+#endif
+
 extern unsigned int __bss_end;
 extern unsigned int __heap_start;
 extern void *__brkval;

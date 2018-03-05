@@ -61,14 +61,13 @@ int init_panels()
 }
 
 int set_panel_pixel_RGB(int panel, int pixel, char * pixel_data){
-    // if (DEBUG)
-    // {
-    //     SER_SNPRINTF_COMMENT_PSTR(
-    //         "PIX: setting pixel %3d on panel %d to RGB 0x%02x%02x%02x",
-    //         pixel, panel,
-    //         (uint8_t)pixel_data[0], (uint8_t)pixel_data[1], (uint8_t)pixel_data[2]
-    //     );
-    // }
+    // #if DEBUG_PANEL
+        SER_SNPRINTF_COMMENT_PSTR(
+            "PIX: setting pixel %3d on panel %d to RGB 0x%02x%02x%02x",
+            pixel, panel,
+            (uint8_t)pixel_data[0], (uint8_t)pixel_data[1], (uint8_t)pixel_data[2]
+        );
+    // #endif
     panels[panel][pixel].setRGB(
         (uint8_t)pixel_data[0],
         (uint8_t)pixel_data[1],
@@ -79,14 +78,13 @@ int set_panel_pixel_RGB(int panel, int pixel, char * pixel_data){
 }
 
 int set_panel_pixel_HSV(int panel, int pixel, char * pixel_data){
-    // if (DEBUG)
-    // {
-    //     SER_SNPRINTF_COMMENT_PSTR(
-    //         "PIX: setting pixel %3d on panel %d to HSV 0x%02x%02x%02x",
-    //         pixel, panel,
-    //         (uint8_t)pixel_data[0], (uint8_t)pixel_data[1], (uint8_t)pixel_data[2]
-    //     );
-    // }
+    // #if DEBUG_PANEL
+        SER_SNPRINTF_COMMENT_PSTR(
+            "PIX: setting pixel %3d on panel %d to HSV 0x%02x%02x%02x",
+            pixel, panel,
+            (uint8_t)pixel_data[0], (uint8_t)pixel_data[1], (uint8_t)pixel_data[2]
+        );
+    // #endif
     panels[panel][pixel].setHSV(
         (uint8_t)pixel_data[0],
         (uint8_t)pixel_data[1],
@@ -96,16 +94,16 @@ int set_panel_pixel_HSV(int panel, int pixel, char * pixel_data){
     return 0;
 }
 
-int set_panel_RGB(int panel, char * pixel_data) {
-    for (int pixel = 0; pixel < panel_info[panel]; pixel++)
+int set_panel_RGB(int panel, char * pixel_data, int offset) {
+    for (int pixel = offset; pixel < panel_info[panel]; pixel++)
     {
         set_panel_pixel_RGB(panel, pixel, pixel_data);
     }
     return 0;
 }
 
-int set_panel_HSV(int panel, char * pixel_data) {
-    for (int pixel = 0; pixel < panel_info[panel]; pixel++)
+int set_panel_HSV(int panel, char * pixel_data, int offset) {
+    for (int pixel = offset; pixel < panel_info[panel]; pixel++)
     {
         set_panel_pixel_HSV(panel, pixel, pixel_data);
     }

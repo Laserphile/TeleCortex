@@ -59,9 +59,9 @@ int set_panel_pixel_RGB(int panel, int pixel, char * pixel_data);
 
 int set_panel_pixel_HSV(int panel, int pixel, char * pixel_data);
 
-int set_panel_RGB(int panel, char * pixel_data);
+int set_panel_RGB(int panel, char * pixel_data, int offset);
 
-int set_panel_HSV(int panel, char * pixel_data);
+int set_panel_HSV(int panel, char * pixel_data, int offset);
 
 
 #endif /* __PANEL_H__ */

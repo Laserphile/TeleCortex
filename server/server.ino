@@ -355,6 +355,9 @@ void setup()
         SER_SNPRINTF_COMMENT_PSTR("SET: detected board: %s", DETECTED_BOARD);
         SER_SNPRINTF_COMMENT_PSTR("SET: sram size: %d", SRAM_SIZE);
         SER_SNPRINTF_COMMENT_PSTR("SET: Free SRAM %d", getFreeSram());
+        SER_SNPRINTF_COMMENT_PSTR("SET: Debug flag: %d", DEBUG);
+        SER_SNPRINTF_COMMENT_PSTR("SET: Debug Panel flag: %d", DEBUG_PANEL);
+        SER_SNPRINTF_COMMENT_PSTR("SET: Debug loop flag: %d", DEBUG_LOOP);
     #endif
 
     // Clear out buffer

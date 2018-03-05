@@ -268,28 +268,28 @@ int gcode_M260X()
     char pixel_data[3];
 
     if( parser.codenum == 2600 || parser.codenum == 2601) {
-        for (int pixel = pixel_offset; pixel < (panel_payload_len / 4); pixel++)
+        for (int pixel = 0; pixel < (panel_payload_len / 4); pixel++)
         {
             // every 4 bytes of encoded base64 corresponds to a single RGB pixel
             base64_decode(pixel_data, panel_payload + (pixel * 4), 4);
             if (parser.codenum == 2600)
             {
-                set_panel_pixel_RGB(panel_number, pixel, pixel_data);
+                set_panel_pixel_RGB(panel_number, pixel_offset + pixel, pixel_data);
             }
             else if (parser.codenum == 2601)
             {
-                set_panel_pixel_HSV(panel_number, pixel, pixel_data);
+                set_panel_pixel_HSV(panel_number, pixel_offset + pixel, pixel_data);
             }
         }
     } else if (parser.codenum == 2602 || parser.codenum == 2603) {
         base64_decode(pixel_data, panel_payload, 4);
         if (parser.codenum == 2602)
         {
-            set_panel_RGB(panel_number, pixel_data);
+            set_panel_RGB(panel_number, pixel_data, pixel_offset);
         }
         else if (parser.codenum == 2603)
         {
-            set_panel_HSV(panel_number, pixel_data);
+            set_panel_HSV(panel_number, pixel_data, pixel_offset);
         }
     }
 
