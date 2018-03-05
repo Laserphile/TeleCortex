@@ -93,6 +93,10 @@ void queue_clear()
  */
 inline void queue_advance_read() {
     if( cmd_queue_index_w == cmd_queue_index_r){
+        if(!queue_full){
+            // If the queue was previously empty, don't do anything
+            return;
+        }
         queue_full = false;
     }
     cmd_queue_index_r = (cmd_queue_index_r+1) % MAX_QUEUE_LEN;
@@ -307,6 +311,15 @@ int gcode_M110(){
     return 0;
 }
 
+int gcode_M9999() {
+    #if DEBUG_GCODE
+        SER_SNPRINTF_COMMENT_PSTR("GCO: Calling M%d", parser.codenum);
+    #endif
+
+    sw_reset();
+    return 0;
+}
+
 int process_parsed_command() {
     // TODO: this
     switch (parser.command_letter)
@@ -330,8 +343,7 @@ int process_parsed_command() {
         case 2610:
             return gcode_M2610();
         case 9999:
-            sw_reset();
-            return 0;
+            return gcode_M9999();;
         default:
             return parser.unknown_command_error();
         }
