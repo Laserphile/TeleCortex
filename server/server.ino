@@ -46,6 +46,7 @@ void sw_reset(){
     #if defined(__MK20DX128__) || defined(__MK20DX256__)
     init_clock();
     init_queue();
+    // TODO: fix calls queue_advance_read after this finishes, so messes up queue
     #else
     // Restarts program from beginning but does not reset the peripherals and registers
     asm volatile ("  jmp 0");
@@ -330,6 +331,7 @@ int process_parsed_command() {
             return gcode_M2610();
         case 9999:
             sw_reset();
+            return 0;
         default:
             return parser.unknown_command_error();
         }
