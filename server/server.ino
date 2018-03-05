@@ -317,7 +317,7 @@ void process_next_command()
     char *const current_command = command_queue[cmd_queue_index_r];
 
     parser.parse(current_command);
-    #if DEBUG
+    #if DEBUG_PARSER
         parser.debug();
     #endif
     error_code = process_parsed_command();
@@ -459,15 +459,12 @@ void loop()
         get_available_commands();
     }
     if (queue_length()){
-        #if DEBUG
+        #if DEBUG_LOOP
             SER_SNPRINTF_COMMENT_PSTR("LOO: Next command: '%s'", command_queue[cmd_queue_index_r]);
         #endif
         process_next_command();
         queue_advance_read();
     } else {
-        #if DEBUG
-
-        #endif
         if((idle_linenum < this_linenum) || (t_now - last_loop_idle > LOOP_IDLE_PERIOD)){
             SER_SNPRINT_PSTR("IDLE");
             last_loop_idle = t_now;

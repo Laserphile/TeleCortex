@@ -34,7 +34,7 @@ class GCodeParser
     static int arg_str_len;         // Length of the current argument value string
     static long linenum;            // Line number of command if provided
 
-#if DEBUG
+#if DEBUG_GCODE
     void debug();
 #endif
 

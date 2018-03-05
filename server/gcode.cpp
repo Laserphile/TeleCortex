@@ -98,9 +98,9 @@ void GCodeParser::parse(char *p)
         while (IS_SPACE(*p))
             p++; // Skip spaces between parameters & values
 
-        const bool has_arg = HAS_ARG(p);
 
-        #if DEBUG
+        #if DEBUG_GCODE
+            const bool has_arg = HAS_ARG(p);
             SER_SNPRINTF_COMMENT_PSTR(
                 "PAR: Got letter %c at index %d ,has_arg: %d",
                 code,
@@ -122,7 +122,7 @@ int GCodeParser::unknown_command_error()
     return 11;
 }
 
-#if DEBUG
+#if DEBUG_GCODE
 void GCodeParser::debug()
 {
     SER_SNPRINTF_COMMENT_PSTR("PAD: Command: %s (%c %d)", command_ptr, command_letter, codenum);
@@ -199,14 +199,14 @@ int gcode_M260X()
     char *panel_payload = NULL;
     int panel_payload_len = 0;
 
-    #if DEBUG
+    #if DEBUG_GCODE
         SER_SNPRINTF_COMMENT_PSTR("GCO: Calling M%d", parser.codenum);
     #endif
 
     if (parser.seen('Q'))
     {
         panel_number = parser.value_int();
-        #if DEBUG
+        #if DEBUG_GCODE
             SER_SNPRINTF_COMMENT_PSTR("GCO: -> panel_number: %d", panel_number);
         #endif
         // TODO: validate panel_number
@@ -214,7 +214,7 @@ int gcode_M260X()
     if (parser.seen('S'))
     {
         pixel_offset = parser.value_int();
-        #if DEBUG
+        #if DEBUG_GCODE
             SER_SNPRINTF_COMMENT_PSTR("GCO: -> pixel_offset: %d", pixel_offset);
         #endif
         // TODO: validate pixel_offset
@@ -223,7 +223,7 @@ int gcode_M260X()
     {
         panel_payload = parser.value_ptr;
         panel_payload_len = parser.arg_str_len;
-        #if DEBUG
+        #if DEBUG_GCODE
             STRNCPY_PSTR(
                 fmt_buffer, "%cGCO: -> payload: (%d) '%%n%%%ds'", BUFFLEN_FMT);
             snprintf(
@@ -243,7 +243,7 @@ int gcode_M260X()
         // TODO: validate panel_payload is base64
     }
 
-    #if DEBUG
+    #if DEBUG_GCODE
         char fake_panel[panel_info[panel_number]];
         int dec_len = base64_decode(fake_panel, panel_payload, panel_payload_len);
         STRNCPY_PSTR(
@@ -298,7 +298,7 @@ int gcode_M260X()
 }
 
 int gcode_M2610() {
-    #if DEBUG
+    #if DEBUG_GCODE
         SER_SNPRINT_COMMENT_PSTR("GCO: Calling M2610");
     #endif
     // TODO: This
