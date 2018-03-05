@@ -6,6 +6,7 @@
 /* Display rainbows until receive GCode */
 #define RAINBOWS_UNTIL_GCODE 1
 #define STATUS_PIN 13
+#define APA_DATA_RATE 0.1
 
 #include "panel_config.h"
 #include "board_properties.h"
