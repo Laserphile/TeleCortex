@@ -270,6 +270,26 @@ void get_available_commands()
     // TODO: maybe read commands off SD card?
 }
 
+/**
+ * TODO: move this to gcode.cpp
+ */
+int gcode_M110(){
+
+    #if DEBUG_GCODE
+        SER_SNPRINTF_COMMENT_PSTR("GCO: Calling M%d", parser.codenum);
+    #endif
+
+    if (parser.seen('N')){
+        long new_linenum = parser.value_long();
+        #if DEBUG_GCODE
+            SER_SNPRINTF_COMMENT_PSTR("GCO: -> new_linenum: %d", new_linenum);
+        #endif
+        last_linenum = new_linenum;
+    }
+
+    return 0;
+}
+
 int process_parsed_command() {
     // TODO: this
     switch (parser.command_letter)
@@ -283,6 +303,8 @@ int process_parsed_command() {
     case 'M':
         switch (parser.codenum)
         {
+        case 110:
+            return gcode_M110();
         case 2600:
         case 2601:
         case 2602:

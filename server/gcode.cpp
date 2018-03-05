@@ -186,12 +186,6 @@ void GCodeParser::debug()
  * GCode functions
  */
 
-/**
- * Good test codes:
- * M2602 Q1 V/wAA
- * M2610
- */
-
 int gcode_M260X()
 {
     int panel_number = 0;
