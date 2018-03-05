@@ -16,6 +16,8 @@
  * Req: Common, Serial
  */
 
+// TODO: move these to config?
+
 // Maximum command length
 #define MAX_CMD_SIZE 512
 
@@ -105,7 +107,9 @@ inline bool enqueue_command(const char* cmd) {
     return true;
 }
 
-static long gcode_N, gcode_LastN = 0;
+static long this_linenum = 0; // The linenum of the command being currently parsed
+static long last_linenum = 0; // the last linenum that was parsed
+static long idle_linenum = -1; // the last linenum where an idle was printed
 
 /**
  * Flush serial and command queue then request resend
@@ -117,7 +121,7 @@ void flush_serial_queue_resend() {
 
     SERIAL_OBJ.flush();
     queue_clear();
-    SER_SNPRINTF_MSG_PSTR("RS %s", gcode_LastN);
+    SER_SNPRINTF_MSG_PSTR("RS %s", last_linenum);
 
     #if DEBUG
         SER_SNPRINTF_COMMENT_PSTR("FLU: queue_length: %d", queue_length());
@@ -143,11 +147,11 @@ int validate_serial_special_fields(char *command)
                 npos = n2pos;
         }
 
-        gcode_N = strtol(npos + 1, NULL, 10);
+        this_linenum = strtol(npos + 1, NULL, 10);
 
-        if (gcode_N != gcode_LastN + 1 && !M110)
+        if (this_linenum != last_linenum + 1 && !M110)
         {
-            SNPRINTF_MSG_PSTR("Line numbers not sequential. Current: %d, Previous: %d", gcode_N, gcode_LastN);
+            SNPRINTF_MSG_PSTR("Line numbers not sequential. Current: %d, Previous: %d", this_linenum, last_linenum);
             return 10;
         }
     }
@@ -171,7 +175,7 @@ int validate_serial_special_fields(char *command)
     }
     #endif
 
-    gcode_LastN = gcode_N;
+    last_linenum = this_linenum;
     return 0;
 }
 
@@ -324,7 +328,7 @@ void process_next_command()
             print_error(error_code, msg_buffer);
         }
         // TODO: flush buffer?
-        // TODO: decrement gcode_LastN?
+        // TODO: decrement last_linenum?
     } else {
         if(parser.linenum >= 0){
             print_line_ok(parser.linenum);
@@ -458,10 +462,13 @@ void loop()
         process_next_command();
         queue_advance_read();
     } else {
-        // TODO: limit rate of sending IDLE
-        if (t_now - last_loop_idle > LOOP_IDLE_PERIOD){
+        #if DEBUG
+
+        #endif
+        if((idle_linenum < this_linenum) || (t_now - last_loop_idle > LOOP_IDLE_PERIOD)){
             SER_SNPRINT_PSTR("IDLE");
             last_loop_idle = t_now;
+            idle_linenum = this_linenum;
         }
     }
 }
