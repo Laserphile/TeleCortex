@@ -35,15 +35,15 @@ bool queue_full;
 static long this_linenum; // The linenum of the command being currently parsed
 static long last_linenum; // the last linenum that was parsed
 static long idle_linenum; // the last linenum where an idle was printed
+long long int commands_processed;
 
 void sw_reset(){
     #if defined(__MK20DX128__) || defined(__MK20DX256__)
-    init_clock();
-    init_queue();
-    // TODO: fix calls queue_advance_read after this finishes, so messes up queue
+        init_clock();
+        init_queue();
     #else
-    // Restarts program from beginning but does not reset the peripherals and registers
-    asm volatile ("  jmp 0");
+        // Restarts program from beginning but does not reset the peripherals and registers
+        asm volatile ("  jmp 0");
     #endif
 }
 
@@ -58,6 +58,7 @@ int init_queue(){
     this_linenum = 0;
     last_linenum = 0;
     idle_linenum = -1;
+    commands_processed = 0;
     return 0;
 }
 
@@ -354,8 +355,6 @@ int process_parsed_command() {
     return 0;
 }
 
-long long int commands_processed = 0;
-
 /**
  * Process Next Command
  * Inspired by Marlin/Marlin_main::process_next_command()
@@ -408,6 +407,8 @@ void setup()
         SER_SNPRINTF_COMMENT_PSTR("SET: Debug loop flag: %d", DEBUG_LOOP);
         SER_SNPRINTF_COMMENT_PSTR("SET: MAX_QUEUE_LEN: %d", MAX_QUEUE_LEN);
         SER_SNPRINTF_COMMENT_PSTR("SET: MAX_CMD_SIZE: %d", MAX_CMD_SIZE);
+        SER_SNPRINTF_COMMENT_PSTR("SET: this_linenum: %d", this_linenum);
+        SER_SNPRINTF_COMMENT_PSTR("SET: last_linenum: %d", last_linenum);
     #endif
 
     // Clear out buffer
@@ -512,8 +513,9 @@ void loop()
             // SER_SNPRINTF_COMMENT_PSTR("LOO: get_cmd: %d us", get_cmd_time);
             // SER_SNPRINTF_COMMENT_PSTR("LOO: process_cmd: %d us", get_cmd_time);
             if(!NEAR_ZERO(delta_started())){
-                float pixel_set_rate = 1000.0 * pixels_set / delta_started();
-                SER_SNPRINTF_COMMENT_PSTR("LOO: Pixel set rate: %f pps", pixel_set_rate);
+                int pixel_set_rate = int(1000.0 * pixels_set / delta_started());
+                int command_rate = int(1000.0 * commands_processed / delta_started());
+                SER_SNPRINTF_COMMENT_PSTR("LOO: CMD_RATE: %5d cps, PIX_RATE: %7d pps", command_rate, pixel_set_rate);
             }
             last_loop_debug = t_now;
         }
