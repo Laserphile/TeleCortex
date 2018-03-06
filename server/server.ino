@@ -231,10 +231,15 @@ void get_serial_commands()
                 command++; // Skip leading spaces
 
             // TODO: is it better to preprocess the command / calculate checksum here or later?
+            this_linenum = -1;
             error_code = validate_serial_special_fields(command);
             if(error_code)
             {
-                print_error(error_code, msg_buffer);
+                if(this_linenum >= 0){
+                    print_line_error(this_linenum, error_code, msg_buffer);
+                } else {
+                    print_error(error_code, msg_buffer);
+                }
                 #if DEBUG
                     SER_SNPRINTF_COMMENT_PSTR("GSC: Previous command: %s", serial_line_buffer);
                 #endif
