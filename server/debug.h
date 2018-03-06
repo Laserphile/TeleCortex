@@ -20,9 +20,14 @@
 #define DEBUG_GCODE DEBUG
 #endif
 
-extern unsigned int __bss_end;
-extern unsigned int __heap_start;
-extern void *__brkval;
+#ifdef __arm__
+    // should use uinstd.h to define sbrk but Due causes a conflict
+    extern "C" char* sbrk(int incr);
+#else
+    extern char __bss_end;
+    extern char __heap_start;
+    extern char *__brkval;
+#endif
 
 // Current error code
 extern int error_code;

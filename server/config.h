@@ -9,6 +9,15 @@
 /* Display rainbows until receive GCode */
 #define RAINBOWS_UNTIL_GCODE 1
 
+// Maximum command length
+#define MAX_CMD_SIZE 512
+
+// Number of commands in the queue
+#define MAX_QUEUE_LEN 1
+
+#define LOOP_IDLE_PERIOD 0.1
+#define LOOP_DEBUG_PERIOD 1.0
+
 #include "panel_config.h"
 #include "board_properties.h"
 

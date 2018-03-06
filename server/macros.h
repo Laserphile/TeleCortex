@@ -53,4 +53,11 @@
 
 #define CEILING(x, y) (((x) + (y)-1) / (y))
 
+#define UNEAR_ZERO(x) ((x) < 0.000001)
+#define NEAR_ZERO(x) WITHIN(x, -0.000001, 0.000001)
+#define NEAR(x,y) NEAR_ZERO((x)-(y))
+
+#define RECIPROCAL(x) (NEAR_ZERO(x) ? 0.0 : 1.0 / (x))
+#define FIXFLOAT(f) (f + 0.00001)
+
 #endif // __MACROS_H__

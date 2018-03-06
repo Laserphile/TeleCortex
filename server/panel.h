@@ -37,13 +37,13 @@ extern CRGB **panels;
  */
 
 #define INIT_PANEL(data_pin, clk_pin, len)                                                                                               \
-    SER_SNPRINTF_COMMENT_PSTR("Free SRAM %d", getFreeSram());                                                                            \
+    SER_SNPRINTF_COMMENT_PSTR("PAN: Free SRAM %d", getFreeSram());                                                                            \
     if (!VALID_PIN((data_pin)) || (len) <= 0)                                                                                            \
     {                                                                                                                                    \
         SER_SNPRINTF_COMMENT_PSTR("PANEL_%02d not configured", panel_count);                                                           \
         return 0;                                                                                                                        \
     }                                                                                                                                    \
-    SER_SNPRINTF_COMMENT_PSTR("initializing PANEL_%02d, data_pin: %d, clk_pin: %d, len: %d", panel_count, (data_pin), (clk_pin), (len)); \
+    SER_SNPRINTF_COMMENT_PSTR("PAN: initializing PANEL_%02d, data_pin: %d, clk_pin: %d, len: %d", panel_count, (data_pin), (clk_pin), (len)); \
     panel_info[panel_count] = (len);                                                                                                     \
     pixel_count += (len);                                                                                                                \
     panels[panel_count] = (CRGB *)malloc((len) * sizeof(CRGB));                                                                          \

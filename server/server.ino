@@ -18,12 +18,6 @@
 
 // TODO: move these to config?
 
-// Maximum command length
-#define MAX_CMD_SIZE 512
-
-// Number of commands in the queue
-#define MAX_QUEUE_LEN 2
-
 /**
  * GCode Command Queue
  * A simple ring buffer of BUFSIZE command strings.
@@ -412,13 +406,16 @@ void setup()
         SER_SNPRINTF_COMMENT_PSTR("SET: Debug flag: %d", DEBUG);
         SER_SNPRINTF_COMMENT_PSTR("SET: Debug Panel flag: %d", DEBUG_PANEL);
         SER_SNPRINTF_COMMENT_PSTR("SET: Debug loop flag: %d", DEBUG_LOOP);
+        SER_SNPRINTF_COMMENT_PSTR("SET: MAX_QUEUE_LEN: %d", MAX_QUEUE_LEN);
+        SER_SNPRINTF_COMMENT_PSTR("SET: MAX_CMD_SIZE: %d", MAX_CMD_SIZE);
     #endif
 
     // Clear out buffer
     msg_buffer[0] = '\0';
 
+    delay(1000);
+    SERIAL_OBJ.flush();
     error_code = init_panels();
-
     // Check that there are not too many panels or pixels for the board
     if (!error_code)
     {
@@ -426,6 +423,7 @@ void setup()
         {
             error_code = 01;
             SNPRINTF_MSG_PSTR("SET: pixel_count is %d. No pixels defined. Exiting", pixel_count);
+            stop();
         }
     }
     if (error_code)
@@ -469,9 +467,16 @@ void setup()
     else{
         SER_SNPRINT_COMMENT_PSTR("SET: Clock Setup: OK");
     }
+
+    SERIAL_OBJ.flush();
 }
 
-// temporarily store the hue value calculated
+// Store the average time spent in each function
+
+#if DEBUG_LOOP
+    long get_cmd_time = 0;
+    long process_cmd_time = 0;
+#endif
 
 void loop()
 {
@@ -502,21 +507,39 @@ void loop()
             // SER_SNPRINTF_COMMENT_PSTR("LOO: queue_length %d", queue_length());
             // SER_SNPRINTF_COMMENT_PSTR("LOO: cmd_queue_index_r %d", cmd_queue_index_r);
             // SER_SNPRINTF_COMMENT_PSTR("LOO: cmd_queue_index_w %d", cmd_queue_index_w);
-            // TODO: time since start and bytes written to LEDs
-            float pixel_set_rate = (float)(pixels_set) / delta_started();
-            SER_SNPRINTF_COMMENT_PSTR("LOO: Pixel set rate: %f", pixel_set_rate);
+            // SER_SNPRINTF_COMMENT_PSTR("LOO: Time elapsed %d", delta_started());
+            // SER_SNPRINTF_COMMENT_PSTR("LOO: Pixels set %d", pixels_set);
+            // SER_SNPRINTF_COMMENT_PSTR("LOO: get_cmd: %d", (float)get_cmd_time / 1000.0);
+            // SER_SNPRINTF_COMMENT_PSTR("LOO: process_cmd: %d", (float)get_cmd_time / 1000.0);
+            if(!NEAR_ZERO(delta_started())){
+                float pixel_set_rate = 1000.0 * pixels_set / delta_started();
+                SER_SNPRINTF_COMMENT_PSTR("LOO: Pixel set rate: %f pps", pixel_set_rate);
+            }
             last_loop_debug = t_now;
         }
+
+        SERIAL_OBJ.flush();
     #endif
 
     if (queue_length() < MAX_QUEUE_LEN) {
+        #if DEBUG_LOOP
+            stopwatch_start();
+        #endif
         get_available_commands();
+        #if DEBUG_LOOP
+             get_cmd_time = (get_cmd_time + stopwatch_stop()) / 2;
+        #endif
+
     }
     if (queue_length()){
         #if DEBUG_LOOP
             SER_SNPRINTF_COMMENT_PSTR("LOO: Next command: '%s'", command_queue[cmd_queue_index_r]);
+            stopwatch_start();
         #endif
         process_next_command();
+        #if DEBUG_LOOP
+             process_cmd_time = (process_cmd_time + stopwatch_stop()) / 2;
+        #endif
         queue_advance_read();
     } else {
         if((idle_linenum < this_linenum) || (t_now - last_loop_idle > LOOP_IDLE_PERIOD)){

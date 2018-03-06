@@ -4,13 +4,12 @@
 #include <Arduino.h>
 #include <TimeLib.h>
 
-#define LOOP_IDLE_PERIOD 1.0
-#define LOOP_DEBUG_PERIOD 1.0
-
-extern time_t last_loop_debug;
-extern time_t last_loop_idle;
+extern unsigned long last_loop_debug;
+extern unsigned long last_loop_idle;
 
 int init_clock();
-time_t delta_started();
+unsigned long delta_started();
+void stopwatch_start();
+long stopwatch_stop();
 
 #endif /* __CLOCK_H__ */

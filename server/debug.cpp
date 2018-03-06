@@ -11,15 +11,17 @@
 
 int error_code = 0;
 
+// function from the sdFat library (SdFatUtil.cpp)
+// licensed under GPL v3
+// Full credit goes to William Greiman.
 int getFreeSram()
 {
-    uint8_t newVariable;
-    // heap is empty, use bss as start memory address
-    if ((int)__brkval == 0)
-        return (((int)&newVariable) - ((int)&__bss_end));
-    // use heap end as the start of the memory address
-    else
-        return (((int)&newVariable) - ((int)__brkval));
+    char top;
+    #ifdef __arm__
+        return &top - reinterpret_cast<char*>(sbrk(0));
+    #else  // __arm__
+        return __brkval ? &top - __brkval : &top - &__bss_end;
+    #endif  // __arm__
 };
 
 void print_error(int error_code, char* message) {
