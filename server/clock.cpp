@@ -24,9 +24,9 @@ unsigned long delta_started() {
 }
 
 void stopwatch_start() {
-    stopwatch_started = millis();
+    stopwatch_started = micros();
 }
 
 long stopwatch_stop() {
-    return millis() - stopwatch_started;
+    return micros() - stopwatch_started;
 }

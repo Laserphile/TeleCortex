@@ -509,8 +509,8 @@ void loop()
             // SER_SNPRINTF_COMMENT_PSTR("LOO: cmd_queue_index_w %d", cmd_queue_index_w);
             // SER_SNPRINTF_COMMENT_PSTR("LOO: Time elapsed %d", delta_started());
             // SER_SNPRINTF_COMMENT_PSTR("LOO: Pixels set %d", pixels_set);
-            // SER_SNPRINTF_COMMENT_PSTR("LOO: get_cmd: %d", (float)get_cmd_time / 1000.0);
-            // SER_SNPRINTF_COMMENT_PSTR("LOO: process_cmd: %d", (float)get_cmd_time / 1000.0);
+            // SER_SNPRINTF_COMMENT_PSTR("LOO: get_cmd: %d us", get_cmd_time);
+            // SER_SNPRINTF_COMMENT_PSTR("LOO: process_cmd: %d us", get_cmd_time);
             if(!NEAR_ZERO(delta_started())){
                 float pixel_set_rate = 1000.0 * pixels_set / delta_started();
                 SER_SNPRINTF_COMMENT_PSTR("LOO: Pixel set rate: %f pps", pixel_set_rate);
@@ -527,7 +527,7 @@ void loop()
         #endif
         get_available_commands();
         #if DEBUG_LOOP
-             get_cmd_time = (get_cmd_time + stopwatch_stop()) / 2;
+            get_cmd_time = (get_cmd_time + stopwatch_stop()) / 2;
         #endif
 
     }
