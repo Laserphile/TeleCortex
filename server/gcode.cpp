@@ -186,12 +186,21 @@ void GCodeParser::debug()
  * GCode functions
  */
 
+inline bool panel_payload_gcode(){
+    return (parser.codenum == 2600 || parser.codenum == 2601);
+}
+
+inline bool panel_single_gcode(){
+    return (parser.codenum == 2602 || parser.codenum == 2603);
+}
+
 int gcode_M260X()
 {
     int panel_number = 0;
     int pixel_offset = 0;
     char *panel_payload = NULL;
     int panel_payload_len = 0;
+    int panel_len = 0;
 
     #if DEBUG_GCODE
         SER_SNPRINTF_COMMENT_PSTR("GCO: Calling M%d", parser.codenum);
@@ -203,15 +212,54 @@ int gcode_M260X()
         #if DEBUG_GCODE
             SER_SNPRINTF_COMMENT_PSTR("GCO: -> panel_number: %d", panel_number);
         #endif
-        // TODO: validate panel_number
+        // validate panel_number
+
+        // Test with M2600 V-1
+        if(panel_number < 0){
+            SNPRINTF_MSG_PSTR(
+                "Negative panel number? panel_number: %d",
+                panel_number
+            );
+            return 12;
+        }
+
+        // Test with M2600 V1000
+        if(panel_number >= MAX_PANELS){
+            SNPRINTF_MSG_PSTR(
+                "panel number too big. panel_number: %d, MAX_PANELS: %d",
+                panel_number, MAX_PANELS
+            );
+            return 12;
+        }
     }
+
+    panel_len = panel_info[panel_number];
+
     if (parser.seen('S'))
     {
         pixel_offset = parser.value_int();
         #if DEBUG_GCODE
             SER_SNPRINTF_COMMENT_PSTR("GCO: -> pixel_offset: %d", pixel_offset);
         #endif
-        // TODO: validate pixel_offset
+
+        // validate pixel_offset
+
+        // Test with M2600 S-1
+        if(pixel_offset < 0){
+            SNPRINTF_MSG_PSTR(
+                "Negative pixel offset? pixel_offset: %d",
+                pixel_offset
+            );
+            return 13;
+        }
+        // Test with M2600 S1000
+        if(pixel_offset >= panel_len){
+            SNPRINTF_MSG_PSTR(
+                "pixel offset too big for panel. pixel_offset: %d, panel_len: %d",
+                pixel_offset, panel_len
+            );
+            return 13;
+        }
     }
     if (parser.seen('V'))
     {
@@ -233,12 +281,65 @@ int gcode_M260X()
             SERIAL_OBJ.println(msg_buffer);
         #endif
 
-        // TODO: validate panel_payload_len is multiple of 4 (4 bytes encoded per 3 pixels (RGB))
-        // TODO: validate panel_payload is base64
+        // validate panel_payload is base64
+        // TODO: This check might not be necessary if handled in parser
+        // Test with M2600 V/-//
+        char *p = panel_payload;
+        int i = 0;
+        while((i < panel_payload_len) && (p[i] != '\0')){
+            if(!IS_BASE64(p[i])){
+                SNPRINTF_MSG_PSTR(
+                    "panel payload is not encoded in base64. panel_payload: %s offending char: %c, offending index: %d",
+                    panel_payload, p, i
+                );
+                return 14;
+            }
+            i++;
+        }
+
+        // validate panel_payload_len is multiple of 4 (4 bytes encoded per 3 pixels (RGB))
+        // Test with M2600 V/////
+        if((panel_payload_len % 4) != 0){
+            SNPRINTF_MSG_PSTR(
+                "base64 panel payload should be a multiple of 4 bytes. panel_payload (%d): '%s'",
+                panel_payload_len, panel_payload
+            );
+            return 14;
+        }
+
+        if( panel_payload_gcode() ) {
+            // Test with M2600 S332 V////////
+            if((panel_payload_len / 4) > (panel_len - pixel_offset)){
+                SNPRINTF_MSG_PSTR(
+                    "base64 panel payload too long for panel. panel_payload_len (encoded bytes): %d pixel_offset: %d, panel_len: %d",
+                    panel_payload_len, pixel_offset, panel_len
+                );
+                return 14;
+            }
+        } else if (panel_single_gcode()) {
+            // Test with M2600 S332 V/////
+            if(panel_payload_len != 4){
+                SNPRINTF_MSG_PSTR(
+                    "encoded panel payload should be 4 chars not: %d",
+                    panel_payload_len
+                );
+                return 14;
+            }
+        }
+    }
+
+    // Validate panel_payload not empty
+    // Test with M2600 V
+    if(panel_payload_len <= 0){
+        SNPRINTF_MSG_PSTR(
+            "panel payload must not be empty",
+            NULL
+        );
+        return 14;
     }
 
     #if DEBUG_GCODE
-        char fake_panel[panel_info[panel_number]];
+        char fake_panel[panel_len];
         int dec_len = base64_decode(fake_panel, panel_payload, panel_payload_len);
         STRNCPY_PSTR(
             fmt_buffer, "%cGCO: -> decoded payload: (%d) 0x", BUFFLEN_FMT);
@@ -261,7 +362,7 @@ int gcode_M260X()
 
     char pixel_data[3];
 
-    if( parser.codenum == 2600 || parser.codenum == 2601) {
+    if( panel_payload_gcode() ) {
         for (int pixel = 0; pixel < (panel_payload_len / 4); pixel++)
         {
             // every 4 bytes of encoded base64 corresponds to a single RGB pixel
@@ -275,7 +376,7 @@ int gcode_M260X()
                 set_panel_pixel_HSV(panel_number, pixel_offset + pixel, pixel_data);
             }
         }
-    } else if (parser.codenum == 2602 || parser.codenum == 2603) {
+    } else if (panel_single_gcode()) {
         base64_decode(pixel_data, panel_payload, 4);
         if (parser.codenum == 2602)
         {
