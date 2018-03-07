@@ -482,6 +482,8 @@ void setup()
 #if DEBUG_LOOP
     long get_cmd_time = 0;
     long process_cmd_time = 0;
+    long last_pixels_set = 0;
+    int last_queue_len = 0;
 #endif
 
 void loop()
@@ -534,23 +536,34 @@ void loop()
     #endif
 
     if (queue_length() < MAX_QUEUE_LEN) {
-        #if DEBUG_LOOP
+        #if DEBUG_TIMING
+            last_queue_len = queue_length();
             stopwatch_start();
         #endif
         get_available_commands();
-        #if DEBUG_LOOP
-            get_cmd_time = (get_cmd_time + stopwatch_stop()) / 2;
+        #if DEBUG_TIMING
+            get_cmd_time = stopwatch_stop();
+            SER_SNPRINTF_COMMENT_PSTR(
+                "LOO: GET_CMD: %5d, ENQD: %d",
+                get_cmd_time, (queue_length() - last_queue_len)
+            );
         #endif
 
     }
     if (queue_length()){
-        #if DEBUG_LOOP
+        #if DEBUG_TIMING
             // SER_SNPRINTF_COMMENT_PSTR("LOO: Next command: '%s'", command_queue[cmd_queue_index_r]);
+            last_pixels_set = pixels_set;
             stopwatch_start();
         #endif
         process_next_command();
-        #if DEBUG_LOOP
-             process_cmd_time = (process_cmd_time + stopwatch_stop()) / 2;
+        #if DEBUG_TIMING
+             process_cmd_time = stopwatch_stop();
+             SER_SNPRINTF_COMMENT_PSTR(
+                 "LOO: CMD: %c %4d, PROC_CMD: %5d, PIXLS: %3d",
+                 parser.command_letter, parser.codenum,
+                 process_cmd_time, (pixels_set - last_pixels_set)
+             );
         #endif
         queue_advance_read();
     } else {

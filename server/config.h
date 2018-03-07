@@ -9,6 +9,7 @@
 #define DEBUG_PANEL 0
 #define DEBUG_LOOP 1
 #define DEBUG_GCODE 0
+#define DEBUG_TIMING 1
 #define DISABLE_CHECKSUM 1
 /* Display rainbows until receive GCode */
 #define RAINBOWS_UNTIL_GCODE 1
