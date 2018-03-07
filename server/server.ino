@@ -60,6 +60,7 @@ int init_queue(){
     last_linenum = 0;
     idle_linenum = -1;
     commands_processed = 0;
+    pixels_set = 0;
     return 0;
 }
 
@@ -528,6 +529,7 @@ void loop()
                 );
             }
             last_loop_debug = t_now;
+            // last_loop_debug = 0;
         }
 
         SERIAL_OBJ.flush();
