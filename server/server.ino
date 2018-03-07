@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <TimeLib.h>
+#include <FastLED.h>
 
 #include "config.h"
 #include "clock.h"
@@ -520,7 +521,11 @@ void loop()
             if(!NEAR_ZERO(delta_started())){
                 int pixel_set_rate = int(1000.0 * pixels_set / delta_started());
                 int command_rate = int(1000.0 * commands_processed / delta_started());
-                SER_SNPRINTF_COMMENT_PSTR("LOO: CMD_RATE: %5d cps, PIX_RATE: %7d pps", command_rate, pixel_set_rate);
+                int fps = FastLED.getFPS();
+                SER_SNPRINTF_COMMENT_PSTR(
+                    "LOO: FPS: %3d, CMD_RATE: %5d cps, PIX_RATE: %7d pps, QUEUE: %2d / %2d",
+                    fps, command_rate, pixel_set_rate, queue_length(), MAX_QUEUE_LEN
+                );
             }
             last_loop_debug = t_now;
         }

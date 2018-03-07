@@ -26,9 +26,6 @@ extern char err_buffer[BUFFLEN_ERR];
 // Might use bluetooth Serial later.
 #define SERIAL_OBJ Serial
 
-// Serial Baud rate
-#define SERIAL_BAUD 9600
-
 // snprintf to output buffer
 #define SNPRINTF_MSG(...) \
     snprintf(msg_buffer, BUFFLEN_MSG, __VA_ARGS__);
