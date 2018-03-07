@@ -242,9 +242,7 @@ void get_serial_commands()
                 } else {
                     print_error(error_code, msg_buffer);
                 }
-                #if DEBUG
-                    SER_SNPRINTF_COMMENT_PSTR("GSC: Previous command: %s", serial_line_buffer);
-                #endif
+                SER_SNPRINTF_COMMENT_PSTR("GSC: Previous command: %s", serial_line_buffer);
                 flush_serial_queue_resend();
                 error_code = 0;
                 return;
@@ -511,7 +509,7 @@ void loop()
 
     #if DEBUG_LOOP
         if (t_now - last_loop_debug > LOOP_DEBUG_PERIOD){
-            SER_SNPRINTF_COMMENT_PSTR("LOO: Free SRAM %d", getFreeSram());
+            // SER_SNPRINTF_COMMENT_PSTR("LOO: Free SRAM %d", getFreeSram());
             // SER_SNPRINTF_COMMENT_PSTR("LOO: queue_length %d", queue_length());
             // SER_SNPRINTF_COMMENT_PSTR("LOO: cmd_queue_index_r %d", cmd_queue_index_r);
             // SER_SNPRINTF_COMMENT_PSTR("LOO: cmd_queue_index_w %d", cmd_queue_index_w);
@@ -547,7 +545,7 @@ void loop()
     }
     if (queue_length()){
         #if DEBUG_LOOP
-            SER_SNPRINTF_COMMENT_PSTR("LOO: Next command: '%s'", command_queue[cmd_queue_index_r]);
+            // SER_SNPRINTF_COMMENT_PSTR("LOO: Next command: '%s'", command_queue[cmd_queue_index_r]);
             stopwatch_start();
         #endif
         process_next_command();

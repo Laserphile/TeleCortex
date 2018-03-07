@@ -4,7 +4,7 @@
 #include <Arduino.h>
 
 // Length of various buffer
-#define BUFFLEN_MSG 256
+#define BUFFLEN_MSG 300
 #define BUFFLEN_ERR 16
 #define BUFFLEN_FMT 128
 

@@ -17,7 +17,7 @@ int panel_info[MAX_PANELS];
 int pixel_count = 0;
 
 // The number of pixels that have been set
-int pixels_set;
+int pixels_set = 0;
 
 CRGB **panels = NULL;
 
