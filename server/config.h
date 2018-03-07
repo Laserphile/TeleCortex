@@ -14,7 +14,7 @@
 #define RAINBOWS_UNTIL_GCODE 0
 
 // Maximum command length
-#define MAX_CMD_SIZE 230
+#define MAX_CMD_SIZE 260
 
 // Number of commands in the queue
 #define MAX_QUEUE_LEN 5

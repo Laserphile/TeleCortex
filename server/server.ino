@@ -173,6 +173,7 @@ int validate_serial_special_fields(char *command)
             return 10;
         }
     }
+    #ifndef DISABLE_CHECKSUM
     char *apos = strrchr(command, CHECKSUM_PREFIX);
     if (apos)
     {
@@ -186,7 +187,6 @@ int validate_serial_special_fields(char *command)
             return 19;
         }
     }
-    #ifndef NO_REQUIRE_CHECKSUM
     else {
         STRNCPY_MSG_PSTR("Checksum missing");
         return 19;
