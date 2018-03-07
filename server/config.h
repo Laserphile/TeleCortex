@@ -11,7 +11,7 @@
 #define DEBUG_GCODE 0
 #define DISABLE_CHECKSUM 1
 /* Display rainbows until receive GCode */
-#define RAINBOWS_UNTIL_GCODE 0
+#define RAINBOWS_UNTIL_GCODE 1
 
 // Maximum command length
 #define MAX_CMD_SIZE 260
