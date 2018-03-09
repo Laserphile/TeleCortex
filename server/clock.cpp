@@ -7,7 +7,8 @@
 unsigned long last_loop_debug;
 unsigned long last_loop_idle;
 unsigned long t_started;
-unsigned long stopwatch_started;
+unsigned long stopwatch_started_1;
+unsigned long stopwatch_started_2;
 
 int init_clock() {
     t_started = millis();
@@ -23,10 +24,18 @@ unsigned long delta_started() {
     return millis() - t_started;
 }
 
-void stopwatch_start() {
-    stopwatch_started = micros();
+void stopwatch_start_1() {
+    stopwatch_started_1 = micros();
 }
 
-long stopwatch_stop() {
-    return micros() - stopwatch_started;
+long stopwatch_stop_1() {
+    return micros() - stopwatch_started_1;
+}
+
+void stopwatch_start_2() {
+    stopwatch_started_1 = micros();
+}
+
+long stopwatch_stop_2() {
+    return micros() - stopwatch_started_1;
 }

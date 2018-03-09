@@ -38,6 +38,17 @@ static long last_linenum; // the last linenum that was parsed
 static long idle_linenum; // the last linenum where an idle was printed
 long long int commands_processed;
 
+// Store the time spent in each function
+
+#if DEBUG_LOOP
+    long get_cmd_time = 0;
+    long process_cmd_time = 0;
+    long parse_cmd_time = 0;
+    long process_parsed_cmd_time = 0;
+    long last_pixels_set = 0;
+    int last_queue_len = 0;
+#endif
+
 void sw_reset(){
     #if defined(__MK20DX128__) || defined(__MK20DX256__)
         init_clock();
@@ -368,11 +379,23 @@ void process_next_command()
 {
     char *const current_command = command_queue[cmd_queue_index_r];
 
+    #if DEBUG_TIMING
+        stopwatch_start_2();
+    #endif
     parser.parse(current_command);
+    #if DEBUG_TIMING
+        parse_cmd_time = stopwatch_stop_2();
+    #endif
     #if DEBUG_PARSER
         parser.debug();
     #endif
+    #if DEBUG_TIMING
+        stopwatch_start_2();
+    #endif
     error_code = process_parsed_command();
+    #if DEBUG_TIMING
+        process_parsed_cmd_time = stopwatch_stop_2();
+    #endif
     if(error_code != 0){
         if(parser.linenum >= 0){
             print_line_error(parser.linenum, error_code, msg_buffer);
@@ -477,15 +500,6 @@ void setup()
     SERIAL_OBJ.flush();
 }
 
-// Store the average time spent in each function
-
-#if DEBUG_LOOP
-    long get_cmd_time = 0;
-    long process_cmd_time = 0;
-    long last_pixels_set = 0;
-    int last_queue_len = 0;
-#endif
-
 void loop()
 {
     blink();
@@ -538,11 +552,11 @@ void loop()
     if (queue_length() < MAX_QUEUE_LEN) {
         #if DEBUG_TIMING
             last_queue_len = queue_length();
-            stopwatch_start();
+            stopwatch_start_1();
         #endif
         get_available_commands();
         #if DEBUG_TIMING
-            get_cmd_time = stopwatch_stop();
+            get_cmd_time = stopwatch_stop_1();
             SER_SNPRINTF_COMMENT_PSTR(
                 "LOO: GET_CMD: %5d, ENQD: %d",
                 get_cmd_time, (queue_length() - last_queue_len)
@@ -554,15 +568,15 @@ void loop()
         #if DEBUG_TIMING
             // SER_SNPRINTF_COMMENT_PSTR("LOO: Next command: '%s'", command_queue[cmd_queue_index_r]);
             last_pixels_set = pixels_set;
-            stopwatch_start();
+            stopwatch_start_1();
         #endif
         process_next_command();
         #if DEBUG_TIMING
-             process_cmd_time = stopwatch_stop();
+             process_cmd_time = stopwatch_stop_1();
              SER_SNPRINTF_COMMENT_PSTR(
-                 "LOO: CMD: %c %4d, PROC_CMD: %5d, PIXLS: %3d",
-                 parser.command_letter, parser.codenum,
-                 process_cmd_time, (pixels_set - last_pixels_set)
+                 "LOO: CMD: %c %4d, PIXLS: %3d, PROC_CMD: %5d, PARSE_CMD: %5d, PR_PA_CMD: %5d",
+                 parser.command_letter, parser.codenum, (pixels_set - last_pixels_set),
+                 process_cmd_time, parse_cmd_time, process_parsed_cmd_time
              );
         #endif
         queue_advance_read();
