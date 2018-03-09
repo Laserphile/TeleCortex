@@ -24,18 +24,18 @@ unsigned long delta_started() {
     return millis() - t_started;
 }
 
-void stopwatch_start_1() {
+inline void stopwatch_start_1() {
     stopwatch_started_1 = micros();
 }
 
-long stopwatch_stop_1() {
+inline long stopwatch_stop_1() {
     return micros() - stopwatch_started_1;
 }
 
-void stopwatch_start_2() {
+inline void stopwatch_start_2() {
     stopwatch_started_1 = micros();
 }
 
-long stopwatch_stop_2() {
+inline long stopwatch_stop_2() {
     return micros() - stopwatch_started_1;
 }
