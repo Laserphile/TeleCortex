@@ -1,6 +1,10 @@
 #include "b64.h"
 
+#if (defined(__AVR__))
 #include <avr/pgmspace.h>
+#else
+#include <pgmspace.h>
+#endif
 
 const char PROGMEM b64_alphabet[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
                                     "abcdefghijklmnopqrstuvwxyz"

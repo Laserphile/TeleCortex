@@ -45,7 +45,7 @@ extern char err_buffer[BUFFLEN_ERR];
     SERIAL_OBJ.print(err_buffer);
 
 // Force Progmem storage of static_str and retrieve to buff. Implementation is different for Teensy
-#if defined(TEENSYDUINO)
+#if defined(TEENSYDUINO) || defined(ESP32)
 #define STRNCPY_PSTR(buff, static_str, size) \
     strncpy((buff), (static_str), (size));
 #else

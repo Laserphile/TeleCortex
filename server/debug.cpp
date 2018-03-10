@@ -17,8 +17,10 @@ int error_code = 0;
 int getFreeSram()
 {
     char top;
-    #ifdef __arm__
+    #if defined(__arm__)
         return &top - reinterpret_cast<char*>(sbrk(0));
+    #elif defined(ESP32)
+        return esp_get_free_heap_size();
     #else  // __arm__
         return __brkval ? &top - __brkval : &top - &__bss_end;
     #endif  // __arm__

@@ -1,4 +1,6 @@
-#include "clock.h"
+#if 0
+
+#include "tele_clock.h"
 #include "config.h"
 #include "serial.h"
 
@@ -39,3 +41,5 @@ inline void stopwatch_start_2() {
 inline long stopwatch_stop_2() {
     return micros() - stopwatch_started_1;
 }
+
+#endif

@@ -1,9 +1,9 @@
 #include <Arduino.h>
-#include <TimeLib.h>
+//#include <TimeLib.h>
 #include <FastLED.h>
 
 #include "config.h"
-#include "clock.h"
+// #include "tele_clock.h"
 #include "gcode.h"
 #include "panel.h"
 #include "debug.h"
@@ -11,6 +11,55 @@
 #include "gcode.h"
 #include "b64.h"
 #include "macros.h"
+
+/**
+ * clock
+ */
+
+ int init_clock();
+ unsigned long delta_started();
+ void stopwatch_start_1();
+ long stopwatch_stop_1();
+ void stopwatch_start_2();
+ long stopwatch_stop_2();
+
+ unsigned long last_loop_debug;
+ unsigned long last_loop_idle;
+ unsigned long t_started;
+ unsigned long stopwatch_started_1;
+ unsigned long stopwatch_started_2;
+
+ int init_clock() {
+     t_started = millis();
+     #if DEBUG
+         SER_SNPRINTF_COMMENT_PSTR("CLK: -> t_started: %d", t_started);
+     #endif
+     last_loop_debug = 0;
+     last_loop_idle = 0;
+     return 0;
+ }
+
+ unsigned long delta_started() {
+     return millis() - t_started;
+ }
+
+ inline void stopwatch_start_1() {
+     stopwatch_started_1 = micros();
+ }
+
+ inline long stopwatch_stop_1() {
+     return micros() - stopwatch_started_1;
+ }
+
+ inline void stopwatch_start_2() {
+     stopwatch_started_1 = micros();
+ }
+
+ inline long stopwatch_stop_2() {
+     return micros() - stopwatch_started_1;
+ }
+
+
 
 /**
  * Queue
@@ -50,7 +99,7 @@ long long int commands_processed;
 #endif
 
 void sw_reset(){
-    #if defined(__MK20DX128__) || defined(__MK20DX256__)
+    #ifndef __AVR__
         init_clock();
         init_queue();
     #else
@@ -521,7 +570,7 @@ void loop()
         }
     }
 
-    time_t t_now = now();
+    time_t t_now = millis();
 
     #if DEBUG_LOOP
         if (t_now - last_loop_debug > LOOP_DEBUG_PERIOD){
