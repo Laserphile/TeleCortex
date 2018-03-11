@@ -527,7 +527,7 @@ void loop()
         }
     }
 
-    time_t t_now = micros();
+    time_t t_now = millis();
 
     #if DEBUG_LOOP
         if (t_now - last_loop_debug > LOOP_DEBUG_PERIOD){

@@ -22,7 +22,7 @@
 #define MAX_QUEUE_LEN 5
 
 #define LOOP_IDLE_PERIOD 0
-#define LOOP_DEBUG_PERIOD 1000000
+#define LOOP_DEBUG_PERIOD 1000
 
 #include "panel_config.h"
 #include "board_properties.h"
