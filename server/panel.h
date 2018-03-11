@@ -55,6 +55,8 @@ extern CRGB **panels;
 
 int init_panels();
 
+int reinit_panels();
+
 int set_panel_pixel_RGB(int panel, int pixel, char * pixel_data);
 
 int set_panel_pixel_HSV(int panel, int pixel, char * pixel_data);

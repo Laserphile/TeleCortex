@@ -2,14 +2,14 @@
 #include "config.h"
 #include "serial.h"
 
-//TODO: define clock functions here
-
 unsigned long last_loop_debug;
 unsigned long last_loop_idle;
 unsigned long t_started;
 unsigned long stopwatch_started_0;
 unsigned long stopwatch_started_1;
 unsigned long stopwatch_started_2;
+
+// TODO: make appropriate functions inline and put in header
 
 int init_clock() {
     t_started = millis();

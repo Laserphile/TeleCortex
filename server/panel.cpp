@@ -21,11 +21,15 @@ int pixels_set = 0;
 
 CRGB **panels = NULL;
 
+/**
+ * Called when initializing panels at setup()
+ */
 int init_panels()
 {
     panels = (CRGB **)malloc(MAX_PANELS * sizeof(CRGB *));
     panel_count = 0;
     pixel_count = 0;
+
 
     // This is such bullshit but you gotta do it like this because addLeds needs to know pins at compile time
     INIT_PANEL(PANEL_00_DATA_PIN, PANEL_00_CLK_PIN, PANEL_00_LEN);
@@ -57,6 +61,15 @@ int init_panels()
     FastLED.addLeds<PANEL_TYPE, PANEL_03_DATA_PIN>(panels[panel_count], PANEL_03_LEN);
 #endif
     panel_count++;
+
+    return reinit_panels();
+}
+
+/**
+ * Called by init_panels when initializing panels at setup() or at sw_reset()
+ */
+int reinit_panels() {
+    pixels_set = 0;
     return 0;
 }
 

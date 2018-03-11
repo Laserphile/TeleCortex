@@ -11,36 +11,15 @@
 #include "gcode.h"
 #include "b64.h"
 #include "macros.h"
+#include "queue.h"
 
 /**
  * Queue
  * Req: Common, Serial
  */
 
-// TODO: move these to config?
-
-/**
- * GCode Command Queue
- * A simple ring buffer of BUFSIZE command strings.
- *
- * Commands are copied into this buffer by the command injectors
- * (immediate, serial, sd card) and they are processed sequentially by
- * the main loop. The process_next_command function parses the next
- * command and hands off execution to individual handler functions.
- */
-
-static uint8_t cmd_queue_index_r, // Ring buffer read position
-    cmd_queue_index_w;            // Ring buffer write position
-char command_queue[MAX_QUEUE_LEN][MAX_CMD_SIZE];
-bool queue_full;
-static long this_linenum; // The linenum of the command being currently parsed
-static long last_linenum; // the last linenum that was parsed
-static long idle_linenum; // the last linenum where an idle was printed
-long long int commands_processed;
-
-// Store the time spent in each function
-
 #if DEBUG_LOOP
+    // Store the time spent in each function
     long get_cmd_time = 0;
     long process_cmd_time = 0;
     long parse_cmd_time = 0;
@@ -54,86 +33,11 @@ void sw_reset(){
     #if defined(__MK20DX128__) || defined(__MK20DX256__)
         init_clock();
         init_queue();
+        reinit_panels();
     #else
         // Restarts program from beginning but does not reset the peripherals and registers
         asm volatile ("  jmp 0");
     #endif
-}
-
-/**
- * Init Queue
- * Stub for when queue is rewritten to be more sophisticated w dynamic allocation
- */
-int init_queue(){
-    cmd_queue_index_r = 0;
-    cmd_queue_index_w = 0;
-    queue_full = false;
-    this_linenum = 0;
-    last_linenum = 0;
-    idle_linenum = -1;
-    commands_processed = 0;
-    pixels_set = 0;
-    return 0;
-}
-
-/**
- * Get current number of commands in queue from read and write indices and full flag
- */
-inline int queue_length() {
-    if(queue_full) {
-        return MAX_QUEUE_LEN;
-    } else {
-        // we want modulo, not remainder
-        return (cmd_queue_index_w - cmd_queue_index_r + MAX_QUEUE_LEN) % MAX_QUEUE_LEN;
-    }
-}
-
-/**
- * Clear the command queue
- */
-void queue_clear()
-{
-    cmd_queue_index_r = cmd_queue_index_w;
-    queue_full = false;
-}
-
-/**
- * Increment the command queue read index
- */
-inline void queue_advance_read() {
-    if( cmd_queue_index_w == cmd_queue_index_r){
-        if(!queue_full){
-            // If the queue was previously empty, don't do anything
-            return;
-        }
-        queue_full = false;
-    }
-    cmd_queue_index_r = (cmd_queue_index_r+1) % MAX_QUEUE_LEN;
-}
-
-/**
- * Increment the command queue write index
- */
-inline void queue_advance_write() {
-    cmd_queue_index_w = (cmd_queue_index_w+1) % MAX_QUEUE_LEN;
-    if(cmd_queue_index_w == cmd_queue_index_r){
-        queue_full = true;
-    }
-}
-
-/**
- * Push a command onto the end of the command queue
- */
-inline bool enqueue_command(const char* cmd) {
-    if (*cmd == COMMENT_PREFIX || queue_length() >= MAX_QUEUE_LEN)
-        return false;
-    strncpy(command_queue[cmd_queue_index_w], cmd, MAX_CMD_SIZE);
-    queue_advance_write();
-    #if DEBUG
-        SER_SNPRINTF_COMMENT_PSTR("ENQ: Enqueued command: '%s'", cmd);
-        SER_SNPRINTF_COMMENT_PSTR("ENQ: queue_length: %d", queue_length());
-    #endif
-    return true;
 }
 
 /**
@@ -148,10 +52,9 @@ void flush_serial_queue_resend() {
     queue_clear();
     SER_SNPRINTF_MSG_PSTR("RS %s", last_linenum);
 
-    #if DEBUG
-        SER_SNPRINTF_COMMENT_PSTR("FLU: queue_length: %d", queue_length());
+    #if DEBUG_QUEUE
+        debug_queue();
     #endif
-
 }
 
 /**
@@ -164,11 +67,13 @@ int validate_serial_special_fields(char *command)
     if (npos)
     {
         bool M110 = strstr_P(command, PSTR("M110")) != NULL;
-        //
-        // #if DEBUG
-        //     SER_SNPRINTF_COMMENT_PSTR("command: %s", command);
-        //     SER_SNPRINTF_COMMENT_PSTR("M110: %d", M110);
-        // #endif
+
+        #if DEBUG_QUEUE
+            SER_SNPRINTF_COMMENT_PSTR(
+                "ENQ: CMD: %s, M110: %d, last_linenum: %d",
+                command, M110, last_linenum
+            );
+        #endif
 
         if (M110)
         {
@@ -227,10 +132,10 @@ void get_serial_commands()
     {
         // The character currently being read from serial
         char serial_char = SERIAL_OBJ.read();
-        if (DEBUG_QUEUE) { SER_SNPRINTF_COMMENT_PSTR("GSC: serial char is: %c (%02x)", serial_char, serial_char); }
+        // if (DEBUG_QUEUE) { SER_SNPRINTF_COMMENT_PSTR("GSC: serial char is: %c (%02x)", serial_char, serial_char); }
         if (IS_EOL(serial_char))
         {
-            if (DEBUG_QUEUE) { SER_SNPRINT_COMMENT_PSTR("GSC: serial char is EOL"); }
+            // if (DEBUG_QUEUE) { SER_SNPRINT_COMMENT_PSTR("GSC: serial char is EOL"); }
             serial_comment_mode = false; // end of line == end of comment
 
             if (!serial_count)
@@ -263,13 +168,13 @@ void get_serial_commands()
         }
         else if (serial_count >= MAX_CMD_SIZE - 1)
         {
-            if (DEBUG_QUEUE) { SER_SNPRINTF_COMMENT_PSTR("GSC: serial count %d is larger than MAX_CMD_SIZE: %d, ignore", serial_count, MAX_CMD_SIZE); }
+            // if (DEBUG_QUEUE) { SER_SNPRINTF_COMMENT_PSTR("GSC: serial count %d is larger than MAX_CMD_SIZE: %d, ignore", serial_count, MAX_CMD_SIZE); }
             // Keep fetching, but ignore normal characters beyond the max length
             // The command will be injected when EOL is reached
         }
         else if (serial_char == ESCAPE_PREFIX)
         { // Handle escapes
-            if (DEBUG_QUEUE) { SER_SNPRINT_COMMENT_PSTR("GSC: serial char is escape"); }
+            // if (DEBUG_QUEUE) { SER_SNPRINT_COMMENT_PSTR("GSC: serial char is escape"); }
             if (SERIAL_OBJ.available() > 0)
             {
                 // if we have one more character, copy it over
@@ -281,7 +186,7 @@ void get_serial_commands()
         }
         else
         {
-            if (DEBUG_QUEUE) { SER_SNPRINT_COMMENT_PSTR("GSC: serial char is regular"); }
+            // if (DEBUG_QUEUE) { SER_SNPRINT_COMMENT_PSTR("GSC: serial char is regular"); }
             // it's not a newline, carriage return or escape char
             if (serial_char == COMMENT_PREFIX)
                 serial_comment_mode = true;
@@ -387,7 +292,7 @@ void process_next_command()
     #if DEBUG_TIMING
         parse_cmd_time = stopwatch_stop_2();
     #endif
-    #if DEBUG_PARSER
+    #if DEBUG_GCODE
         parser.debug();
     #endif
     #if DEBUG_TIMING
@@ -532,9 +437,6 @@ void loop()
     #if DEBUG_LOOP
         if (t_now - last_loop_debug > LOOP_DEBUG_PERIOD){
             // SER_SNPRINTF_COMMENT_PSTR("LOO: Free SRAM %d", getFreeSram());
-            // SER_SNPRINTF_COMMENT_PSTR("LOO: queue_length %d", queue_length());
-            // SER_SNPRINTF_COMMENT_PSTR("LOO: cmd_queue_index_r %d", cmd_queue_index_r);
-            // SER_SNPRINTF_COMMENT_PSTR("LOO: cmd_queue_index_w %d", cmd_queue_index_w);
             // SER_SNPRINTF_COMMENT_PSTR("LOO: Time elapsed %d", delta_started());
             // SER_SNPRINTF_COMMENT_PSTR("LOO: Pixels set %d", pixels_set);
             // SER_SNPRINTF_COMMENT_PSTR("LOO: get_cmd: %d us", get_cmd_time);
@@ -568,12 +470,15 @@ void loop()
                 "LOO: GET_CMD: %5d, ENQD: %d",
                 get_cmd_time, (queue_length() - last_queue_len)
             );
+            debug_queue();
         #endif
-
     }
     if (queue_length()){
         #if DEBUG_TIMING
-            // SER_SNPRINTF_COMMENT_PSTR("LOO: Next command: '%s'", command_queue[cmd_queue_index_r]);
+            SER_SNPRINTF_COMMENT_PSTR(
+                "LOO: Next command (%d): '%s'",
+                last_linenum, command_queue[cmd_queue_index_r]
+            );
             last_pixels_set = pixels_set;
             stopwatch_start_1();
         #endif
@@ -585,6 +490,7 @@ void loop()
                  parser.command_letter, parser.codenum, (pixels_set - last_pixels_set),
                  process_cmd_time, parse_cmd_time, process_parsed_cmd_time
              );
+             SERIAL_OBJ.flush();
         #endif
         queue_advance_read();
     } else {
@@ -599,5 +505,6 @@ void loop()
         SER_SNPRINTF_COMMENT_PSTR(
             "LOO: TIME: %d", stopwatch_stop_0()
         );
+        SERIAL_OBJ.flush();
     #endif
 }
