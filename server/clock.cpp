@@ -7,6 +7,7 @@
 unsigned long last_loop_debug;
 unsigned long last_loop_idle;
 unsigned long t_started;
+unsigned long stopwatch_started_0;
 unsigned long stopwatch_started_1;
 unsigned long stopwatch_started_2;
 
@@ -24,18 +25,26 @@ unsigned long delta_started() {
     return millis() - t_started;
 }
 
-inline void stopwatch_start_1() {
+void stopwatch_start_0() {
+    stopwatch_started_0 = micros();
+}
+
+long stopwatch_stop_0() {
+    return micros() - stopwatch_started_0;
+}
+
+void stopwatch_start_1() {
     stopwatch_started_1 = micros();
 }
 
-inline long stopwatch_stop_1() {
+long stopwatch_stop_1() {
     return micros() - stopwatch_started_1;
 }
 
-inline void stopwatch_start_2() {
+void stopwatch_start_2() {
     stopwatch_started_1 = micros();
 }
 
-inline long stopwatch_stop_2() {
+long stopwatch_stop_2() {
     return micros() - stopwatch_started_1;
 }

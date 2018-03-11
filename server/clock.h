@@ -9,6 +9,8 @@ extern unsigned long last_loop_idle;
 
 int init_clock();
 unsigned long delta_started();
+void stopwatch_start_0();
+long stopwatch_stop_0();
 void stopwatch_start_1();
 long stopwatch_stop_1();
 void stopwatch_start_2();

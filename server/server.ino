@@ -45,6 +45,7 @@ long long int commands_processed;
     long process_cmd_time = 0;
     long parse_cmd_time = 0;
     long process_parsed_cmd_time = 0;
+    long loop_time = 0;
     long last_pixels_set = 0;
     int last_queue_len = 0;
 #endif
@@ -226,10 +227,10 @@ void get_serial_commands()
     {
         // The character currently being read from serial
         char serial_char = SERIAL_OBJ.read();
-        // if (DEBUG) { SER_SNPRINTF_COMMENT_PSTR("GSC: serial char is: %c (%02x)", serial_char, serial_char); }
+        if (DEBUG_QUEUE) { SER_SNPRINTF_COMMENT_PSTR("GSC: serial char is: %c (%02x)", serial_char, serial_char); }
         if (IS_EOL(serial_char))
         {
-            // if (DEBUG) { SER_SNPRINT_COMMENT_PSTR("GSC: serial char is EOL"); }
+            if (DEBUG_QUEUE) { SER_SNPRINT_COMMENT_PSTR("GSC: serial char is EOL"); }
             serial_comment_mode = false; // end of line == end of comment
 
             if (!serial_count)
@@ -262,13 +263,13 @@ void get_serial_commands()
         }
         else if (serial_count >= MAX_CMD_SIZE - 1)
         {
-            // if (DEBUG) { SER_SNPRINTF_COMMENT_PSTR("GSC: serial count %d is larger than MAX_CMD_SIZE: %d, ignore", serial_count, MAX_CMD_SIZE); }
+            if (DEBUG_QUEUE) { SER_SNPRINTF_COMMENT_PSTR("GSC: serial count %d is larger than MAX_CMD_SIZE: %d, ignore", serial_count, MAX_CMD_SIZE); }
             // Keep fetching, but ignore normal characters beyond the max length
             // The command will be injected when EOL is reached
         }
         else if (serial_char == ESCAPE_PREFIX)
         { // Handle escapes
-            // if (DEBUG) { SER_SNPRINT_COMMENT_PSTR("GSC: serial char is escape"); }
+            if (DEBUG_QUEUE) { SER_SNPRINT_COMMENT_PSTR("GSC: serial char is escape"); }
             if (SERIAL_OBJ.available() > 0)
             {
                 // if we have one more character, copy it over
@@ -280,7 +281,7 @@ void get_serial_commands()
         }
         else
         {
-            // if (DEBUG) { SER_SNPRINT_COMMENT_PSTR("GSC: serial char is regular"); }
+            if (DEBUG_QUEUE) { SER_SNPRINT_COMMENT_PSTR("GSC: serial char is regular"); }
             // it's not a newline, carriage return or escape char
             if (serial_char == COMMENT_PREFIX)
                 serial_comment_mode = true;
@@ -502,7 +503,12 @@ void setup()
 
 void loop()
 {
-    blink();
+    if (queue_length() == 0){
+        blink();
+    }
+    #if DEBUG_TIMING
+        stopwatch_start_0();
+    #endif
 
     if(RAINBOWS_UNTIL_GCODE && commands_processed == 0){
         int hue = 0;
@@ -521,7 +527,7 @@ void loop()
         }
     }
 
-    time_t t_now = now();
+    time_t t_now = micros();
 
     #if DEBUG_LOOP
         if (t_now - last_loop_debug > LOOP_DEBUG_PERIOD){
@@ -548,6 +554,7 @@ void loop()
 
         SERIAL_OBJ.flush();
     #endif
+
 
     if (queue_length() < MAX_QUEUE_LEN) {
         #if DEBUG_TIMING
@@ -587,4 +594,10 @@ void loop()
             idle_linenum = this_linenum;
         }
     }
+
+    #if DEBUG_TIMING
+        SER_SNPRINTF_COMMENT_PSTR(
+            "LOO: TIME: %d", stopwatch_stop_0()
+        );
+    #endif
 }
