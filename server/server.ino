@@ -104,6 +104,8 @@ int validate_serial_special_fields(char *command)
             );
         #endif
 
+        // TODO: If this_linenum == last_linenum + 2, resent last_linenum + 1
+
         if (this_linenum != last_linenum + 1 && !M110)
         {
             SNPRINTF_MSG_PSTR("Line numbers not sequential. Current: %d, Previous: %d", this_linenum, last_linenum);
@@ -451,9 +453,8 @@ void setup()
 void loop()
 {
     const char * debug_prefix = "LOO";
-    if (queue_length() == 0){
-        blink();
-    }
+    // TODO: limit blinking
+    // blink();
     #if DEBUG_TIMING
         stopwatch_start_0();
     #endif
