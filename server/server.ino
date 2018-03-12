@@ -55,7 +55,7 @@ void flush_serial_queue_resend() {
 
     SERIAL_OBJ.flush();
     queue_clear();
-    SER_SNPRINTF_MSG_PSTR("RS %s", last_linenum);
+    SER_SNPRINTF_MSG_PSTR("RS %d", last_linenum);
 
     #if DEBUG_QUEUE
         debug_queue(debug_prefix);
