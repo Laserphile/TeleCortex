@@ -149,10 +149,6 @@ void get_serial_commands()
     static char serial_line_buffer[MAX_CMD_SIZE];
     static bool serial_comment_mode = false;
 
-    #if DEBUG_QUEUE
-        debug_queue(debug_prefix);
-    #endif
-
     // The index of the character in the line being read from serial.
     int serial_count = 0;
 
@@ -190,10 +186,6 @@ void get_serial_commands()
             // TODO: is it better to preprocess the command / calculate checksum here or later?
             this_linenum = -1;
             error_code = validate_serial_special_fields(command);
-            #if DEBUG_QUEUE
-                SER_SNPRINTF_COMMENT_PSTR("%s: After Validate Special Fields", debug_prefix);
-                debug_queue(debug_prefix);
-            #endif
             if(error_code)
             {
                 if(this_linenum >= 0){
@@ -201,6 +193,10 @@ void get_serial_commands()
                 } else {
                     print_error(error_code, msg_buffer);
                 }
+                #if DEBUG_QUEUE
+                    SER_SNPRINTF_COMMENT_PSTR("%s: After Validate Special Fields error", debug_prefix);
+                    debug_queue(debug_prefix);
+                #endif
                 SER_SNPRINTF_COMMENT_PSTR(
                     "%s: Previous command: %s",
                     debug_prefix, serial_line_buffer
@@ -210,6 +206,12 @@ void get_serial_commands()
 
                 return;
             }
+            #if DEBUG_QUEUE
+                else {
+                    SER_SNPRINTF_COMMENT_PSTR("%s: After Validate Special Fields success", debug_prefix);
+                    debug_queue(debug_prefix);
+                }
+            #endif
             enqueue_command(command);
         }
         else if (serial_count >= MAX_CMD_SIZE - 1)
