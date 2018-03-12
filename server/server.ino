@@ -130,7 +130,9 @@ int validate_serial_special_fields(char *command)
     }
     #endif
 
-    last_linenum = this_linenum;
+    if(this_linenum != -1){
+        last_linenum = this_linenum;
+    }
     return 0;
 }
 
