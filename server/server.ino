@@ -44,8 +44,13 @@ void sw_reset(){
  * Flush serial and command queue then request resend
  */
 void flush_serial_queue_resend() {
+    const char *debug_prefix = "FLU";
+
     #if DEBUG
-        SER_SNPRINT_COMMENT_PSTR("FLU: Flushing");
+        SER_SNPRINTF_COMMENT_PSTR(
+            "%s: Flushing",
+            debug_prefix
+        );
     #endif
 
     SERIAL_OBJ.flush();
@@ -53,7 +58,7 @@ void flush_serial_queue_resend() {
     SER_SNPRINTF_MSG_PSTR("RS %s", last_linenum);
 
     #if DEBUG_QUEUE
-        debug_queue();
+        debug_queue(debug_prefix);
     #endif
 }
 
@@ -63,15 +68,23 @@ void flush_serial_queue_resend() {
  */
 int validate_serial_special_fields(char *command)
 {
+    const char* debug_prefix = "VSF";
     char *npos = (*command == LINENUM_PREFIX) ? command : NULL; // Require the N parameter to start the line
+    #if DEBUG_QUEUE
+        SER_SNPRINTF_COMMENT_PSTR(
+            "%s: CMD: %s, NPOS: 0x%08x",
+            debug_prefix, command, npos
+        );
+        debug_queue(debug_prefix);
+    #endif
     if (npos)
     {
         bool M110 = strstr_P(command, PSTR("M110")) != NULL;
 
         #if DEBUG_QUEUE
             SER_SNPRINTF_COMMENT_PSTR(
-                "ENQ: CMD: %s, M110: %d, last_linenum: %d",
-                command, M110, last_linenum
+                "%s: M110: %d, last_linenum: %d",
+                debug_prefix, M110, last_linenum
             );
         #endif
 
@@ -83,6 +96,13 @@ int validate_serial_special_fields(char *command)
         }
 
         this_linenum = strtol(npos + 1, NULL, 10);
+
+        #if DEBUG_QUEUE
+            SER_SNPRINTF_COMMENT_PSTR(
+                "%s: this_linenum: %d",
+                debug_prefix, this_linenum
+            );
+        #endif
 
         if (this_linenum != last_linenum + 1 && !M110)
         {
@@ -120,10 +140,13 @@ int validate_serial_special_fields(char *command)
  */
 void get_serial_commands()
 {
+    const char * debug_prefix = "GSC";
     static char serial_line_buffer[MAX_CMD_SIZE];
     static bool serial_comment_mode = false;
 
-    // TODO: watch for idle serial, might indicate that an "OK" response was missed by client. Send "IDLE".
+    #if DEBUG_QUEUE
+        debug_queue(debug_prefix);
+    #endif
 
     // The index of the character in the line being read from serial.
     int serial_count = 0;
@@ -132,10 +155,20 @@ void get_serial_commands()
     {
         // The character currently being read from serial
         char serial_char = SERIAL_OBJ.read();
-        // if (DEBUG_QUEUE) { SER_SNPRINTF_COMMENT_PSTR("GSC: serial char is: %c (%02x)", serial_char, serial_char); }
+        #if DEBUG_QUEUE
+            if(serial_count == 0) {
+                SER_SNPRINTF_COMMENT_PSTR(
+                    "%s: serial char at %3d is: (%02x)",
+                    debug_prefix, serial_count, serial_char
+                );
+            }
+        #endif
         if (IS_EOL(serial_char))
         {
-            // if (DEBUG_QUEUE) { SER_SNPRINT_COMMENT_PSTR("GSC: serial char is EOL"); }
+            #if DEBUG_QUEUE
+                SER_SNPRINTF_COMMENT_PSTR("%s: serial char is EOL", debug_prefix);
+                debug_queue(debug_prefix);
+            #endif
             serial_comment_mode = false; // end of line == end of comment
 
             if (!serial_count)
@@ -152,6 +185,10 @@ void get_serial_commands()
             // TODO: is it better to preprocess the command / calculate checksum here or later?
             this_linenum = -1;
             error_code = validate_serial_special_fields(command);
+            #if DEBUG_QUEUE
+                SER_SNPRINTF_COMMENT_PSTR("%s: After Validate Special Fields", debug_prefix);
+                debug_queue(debug_prefix);
+            #endif
             if(error_code)
             {
                 if(this_linenum >= 0){
@@ -159,7 +196,10 @@ void get_serial_commands()
                 } else {
                     print_error(error_code, msg_buffer);
                 }
-                SER_SNPRINTF_COMMENT_PSTR("GSC: Previous command: %s", serial_line_buffer);
+                SER_SNPRINTF_COMMENT_PSTR(
+                    "%s: Previous command: %s",
+                    debug_prefix, serial_line_buffer
+                );
                 flush_serial_queue_resend();
                 error_code = 0;
                 return;
@@ -408,6 +448,7 @@ void setup()
 
 void loop()
 {
+    const char * debug_prefix = "LOO";
     if (queue_length() == 0){
         blink();
     }
@@ -446,8 +487,8 @@ void loop()
                 int command_rate = int(1000.0 * commands_processed / delta_started());
                 int fps = FastLED.getFPS();
                 SER_SNPRINTF_COMMENT_PSTR(
-                    "LOO: FPS: %3d, CMD_RATE: %5d cps, PIX_RATE: %7d pps, QUEUE: %2d / %2d",
-                    fps, command_rate, pixel_set_rate, queue_length(), MAX_QUEUE_LEN
+                    "%s: FPS: %3d, CMD_RATE: %5d cps, PIX_RATE: %7d pps, QUEUE: %2d / %2d",
+                    debug_prefix, fps, command_rate, pixel_set_rate, queue_length(), MAX_QUEUE_LEN
                 );
             }
             last_loop_debug = t_now;
@@ -467,8 +508,8 @@ void loop()
         #if DEBUG_TIMING
             get_cmd_time = stopwatch_stop_1();
             SER_SNPRINTF_COMMENT_PSTR(
-                "LOO: GET_CMD: %5d, ENQD: %d",
-                get_cmd_time, (queue_length() - last_queue_len)
+                "%s: GET_CMD: %5d, ENQD: %d",
+                debug_prefix, get_cmd_time, (queue_length() - last_queue_len)
             );
             debug_queue();
         #endif
@@ -476,8 +517,8 @@ void loop()
     if (queue_length()){
         #if DEBUG_TIMING
             SER_SNPRINTF_COMMENT_PSTR(
-                "LOO: Next command (%d): '%s'",
-                last_linenum, command_queue[cmd_queue_index_r]
+                "%s: Next command (%d): '%s'",
+                debug_prefix, last_linenum, command_queue[cmd_queue_index_r]
             );
             last_pixels_set = pixels_set;
             stopwatch_start_1();
@@ -486,8 +527,8 @@ void loop()
         #if DEBUG_TIMING
              process_cmd_time = stopwatch_stop_1();
              SER_SNPRINTF_COMMENT_PSTR(
-                 "LOO: CMD: %c %4d, PIXLS: %3d, PROC_CMD: %5d, PARSE_CMD: %5d, PR_PA_CMD: %5d",
-                 parser.command_letter, parser.codenum, (pixels_set - last_pixels_set),
+                 "%s: CMD: %c %4d, PIXLS: %3d, PROC_CMD: %5d, PARSE_CMD: %5d, PR_PA_CMD: %5d",
+                 debug_prefix, parser.command_letter, parser.codenum, (pixels_set - last_pixels_set),
                  process_cmd_time, parse_cmd_time, process_parsed_cmd_time
              );
              SERIAL_OBJ.flush();
@@ -503,7 +544,8 @@ void loop()
 
     #if DEBUG_TIMING
         SER_SNPRINTF_COMMENT_PSTR(
-            "LOO: TIME: %d", stopwatch_stop_0()
+            "%s: TIME: %d",
+            debug_prefix, stopwatch_stop_0()
         );
         SERIAL_OBJ.flush();
     #endif

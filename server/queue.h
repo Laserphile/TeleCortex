@@ -73,7 +73,7 @@ inline void queue_advance_write() {
 
 bool enqueue_command(const char* cmd);
 
-void debug_queue();
+void debug_queue(const char* debug_prefix);
 
 
 #endif // End __QUEUE_H__

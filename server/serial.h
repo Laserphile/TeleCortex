@@ -13,6 +13,7 @@
 #define ESCAPE_PREFIX '\\'
 #define LINENUM_PREFIX 'N'
 #define CHECKSUM_PREFIX '*'
+#define STRING_TERMINATOR '\0'
 
 // Serial out Buffer
 extern char msg_buffer[BUFFLEN_MSG];
