@@ -55,7 +55,7 @@ void flush_serial_queue_resend() {
 
     SERIAL_OBJ.flush();
     queue_clear();
-    SER_SNPRINTF_MSG_PSTR("RS %d", last_linenum);
+    SER_SNPRINTF_MSG_PSTR("RS %d", last_linenum + 1);
 
     #if DEBUG_QUEUE
         debug_queue(debug_prefix);
@@ -207,6 +207,7 @@ void get_serial_commands()
                 );
                 flush_serial_queue_resend();
                 error_code = 0;
+
                 return;
             }
             enqueue_command(command);
@@ -454,8 +455,9 @@ void setup()
 void loop()
 {
     const char * debug_prefix = "LOO";
-    // TODO: limit blinking
+    // TODO: limit blinking / loop wait
     // blink();
+    delay(LOOP_WAIT_PERIOD);
     #if DEBUG_TIMING
         stopwatch_start_0();
     #endif

@@ -13,8 +13,7 @@
 #define DEBUG_QUEUE 0
 
 /* Command processing flags */
-#define REQUIRE_CHECKSUM 0
-#define REQUIRE_CONSECUTIVE_LINENUM 0
+#define REQUIRE_CHECKSUM 1
 
 /* Display rainbows until receive GCode */
 #define RAINBOWS_UNTIL_GCODE 1
@@ -25,6 +24,7 @@
 // Number of commands in the queue
 #define MAX_QUEUE_LEN 5
 
+// TIMING
 #define LOOP_IDLE_PERIOD 100
 #define LOOP_DEBUG_PERIOD 1000
 
