@@ -105,7 +105,7 @@ int validate_serial_special_fields(char *command)
         #endif
 
         // TODO: If this_linenum == last_linenum + 2, resent last_linenum + 1
-        #ifdef REQUIRE_CONSECUTIVE_LINENUM
+        #if REQUIRE_CONSECUTIVE_LINENUM
             if (this_linenum != last_linenum + 1 && !M110)
             {
                 SNPRINTF_MSG_PSTR("Line numbers not sequential. Current: %d, Previous: %d", this_linenum, last_linenum);
@@ -126,7 +126,7 @@ int validate_serial_special_fields(char *command)
             return 19;
         }
     }
-    #ifdef REQUIRE_CHECKSUM
+    #if REQUIRE_CHECKSUM
         else {
             STRNCPY_MSG_PSTR("Checksum missing");
             return 19;
