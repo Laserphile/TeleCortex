@@ -11,7 +11,11 @@
 #define DEBUG_GCODE 0
 #define DEBUG_TIMING 0
 #define DEBUG_QUEUE 0
-#define DISABLE_CHECKSUM 0
+
+/* Command processing flags */
+#define REQUIRE_CHECKSUM 0
+#define REQUIRE_CONSECUTIVE_LINENUM 0
+
 /* Display rainbows until receive GCode */
 #define RAINBOWS_UNTIL_GCODE 1
 
@@ -21,7 +25,7 @@
 // Number of commands in the queue
 #define MAX_QUEUE_LEN 5
 
-#define LOOP_IDLE_PERIOD 0
+#define LOOP_IDLE_PERIOD 100
 #define LOOP_DEBUG_PERIOD 1000
 
 #include "panel_config.h"
