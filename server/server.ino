@@ -208,13 +208,11 @@ void get_serial_commands()
                 error_code = 0;
 
                 return;
-            }
-            #if DEBUG_QUEUE
-                else {
-                    SER_SNPRINTF_COMMENT_PSTR("%s: After Validate Special Fields success", debug_prefix);
-                    debug_queue(debug_prefix);
+            } else {
+                if(this_linenum >= 0){
+                    print_line_ok(parser.linenum);
                 }
-            #endif
+            }
             enqueue_command(command);
         }
         else if (serial_count >= MAX_CMD_SIZE - 1)
@@ -359,12 +357,7 @@ void process_next_command()
         } else {
             print_error(error_code, msg_buffer);
         }
-        // TODO: flush buffer?
-        // TODO: decrement last_linenum?
     } else {
-        if(parser.linenum >= 0){
-            print_line_ok(parser.linenum);
-        }
         commands_processed++;
     }
     error_code = 0;
