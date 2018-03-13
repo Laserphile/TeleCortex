@@ -23,10 +23,10 @@
 #define MAX_CMD_SIZE 260
 
 // Number of commands in the queue
-#define MAX_QUEUE_LEN 5
+#define MAX_QUEUE_LEN 20
 
 // TIMING
-#define LOOP_WAIT_PERIOD 2
+#define LOOP_WAIT_PERIOD 1
 #define LOOP_IDLE_PERIOD 100
 #define LOOP_DEBUG_PERIOD 1000
 #define FAIL_WAIT_PERIOD 10
