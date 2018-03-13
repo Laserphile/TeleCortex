@@ -43,7 +43,7 @@ void sw_reset(){
 /**
  * Flush serial and command queue then request resend
  */
-void flush_serial_queue_resend() {
+void flush_serial_resend() {
     const char *debug_prefix = "FLU";
 
     #if DEBUG
@@ -54,7 +54,7 @@ void flush_serial_queue_resend() {
     #endif
 
     SERIAL_OBJ.flush();
-    queue_clear();
+    // queue_clear();
     SER_SNPRINTF_MSG_PSTR("RS %d", last_linenum + 1);
 
     delay(FAIL_WAIT_PERIOD);
@@ -186,7 +186,6 @@ void get_serial_commands()
             while (IS_SPACE(*command))
                 command++; // Skip leading spaces
 
-            // TODO: is it better to preprocess the command / calculate checksum here or later?
             this_linenum = -1;
             error_code = validate_serial_special_fields(command);
             if(error_code)
@@ -204,13 +203,13 @@ void get_serial_commands()
                     "%s: Previous command: %s",
                     debug_prefix, serial_line_buffer
                 );
-                flush_serial_queue_resend();
+                flush_serial_resend();
                 error_code = 0;
 
                 return;
             } else {
                 if(this_linenum >= 0){
-                    print_line_ok(parser.linenum);
+                    print_line_ok(this_linenum);
                 }
             }
             enqueue_command(command);
