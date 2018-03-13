@@ -57,6 +57,8 @@ void flush_serial_queue_resend() {
     queue_clear();
     SER_SNPRINTF_MSG_PSTR("RS %d", last_linenum + 1);
 
+    delay(FAIL_WAIT_PERIOD);
+
     #if DEBUG_QUEUE
         debug_queue(debug_prefix);
     #endif
