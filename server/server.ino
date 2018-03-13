@@ -111,6 +111,7 @@ int validate_serial_special_fields(char *command)
             if (this_linenum != last_linenum + 1 && !M110)
             {
                 SNPRINTF_MSG_PSTR("Line numbers not sequential. Current: %d, Previous: %d", this_linenum, last_linenum);
+                this_linenum = last_linenum + 1;
                 return 10;
             }
         #endif
