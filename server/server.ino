@@ -46,6 +46,8 @@ void sw_reset(){
 void flush_serial_resend() {
     const char *debug_prefix = "FLU";
 
+    SER_SNPRINTF_MSG_PSTR("RS %d", last_linenum + 1);
+
     #if DEBUG
         SER_SNPRINTF_COMMENT_PSTR(
             "%s: Flushing",
@@ -54,8 +56,6 @@ void flush_serial_resend() {
     #endif
 
     SERIAL_OBJ.flush();
-    // queue_clear();
-    SER_SNPRINTF_MSG_PSTR("RS %d", last_linenum + 1);
 
     delay(FAIL_WAIT_PERIOD);
 
