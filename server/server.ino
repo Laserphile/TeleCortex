@@ -13,6 +13,8 @@
 #include "macros.h"
 #include "queue.h"
 
+long last_parsed_linenum;
+
 /**
  * Queue
  * Req: Common, Serial
@@ -115,7 +117,9 @@ int validate_serial_special_fields(char *command)
             if (this_linenum != last_linenum + 1 && !M110)
             {
                 SNPRINTF_MSG_PSTR("Line numbers not sequential. Current: %d, Previous: %d", this_linenum, last_linenum);
+                #if REQUIRE_CONSECUTIVE_LINENUM
                 this_linenum = last_linenum + 1;
+                #endif
                 return 10;
             }
         #endif
@@ -357,11 +361,20 @@ void process_next_command()
     if(error_code != 0){
         if(parser.linenum >= 0){
             print_line_error(parser.linenum, error_code, msg_buffer);
-        } else {
+        }
+        #if REQUIRE_CONSECUTIVE_LINENUM
+        else if (last_parsed_linenum >= 0) {
+            print_line_error(last_parsed_linenum + 1, error_code, msg_buffer);
+        }
+        #endif
+        else {
             print_error(error_code, msg_buffer);
         }
     } else {
         commands_processed++;
+        if(parser.linenum >= 0){
+            last_parsed_linenum = parser.linenum;
+        }
     }
     error_code = 0;
 }
