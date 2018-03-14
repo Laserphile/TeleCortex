@@ -59,6 +59,10 @@ void flush_serial_resend() {
 
     delay(FAIL_WAIT_PERIOD);
 
+    while(SERIAL_OBJ.available() > 0){
+        SERIAL_OBJ.read();
+    }
+
     #if DEBUG_QUEUE
         debug_queue(debug_prefix);
     #endif
