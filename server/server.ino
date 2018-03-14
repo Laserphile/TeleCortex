@@ -218,7 +218,12 @@ void get_serial_commands()
                     print_line_ok(this_linenum);
                 }
             }
-            enqueue_command(command);
+            #if !DISABLE_QUEUE
+                enqueue_command(command);
+            #else
+                enqueue_command("");
+                delay(1);
+            #endif
         }
         else if (serial_count >= MAX_CMD_SIZE - 1)
         {
@@ -525,7 +530,6 @@ void loop()
                 "%s: GET_CMD: %5d, ENQD: %d",
                 debug_prefix, get_cmd_time, (queue_length() - last_queue_len)
             );
-            debug_queue();
         #endif
     }
     if (queue_length()){

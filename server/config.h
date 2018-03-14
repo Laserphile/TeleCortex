@@ -29,7 +29,9 @@
 #define LOOP_WAIT_PERIOD 1
 #define LOOP_IDLE_PERIOD 100
 #define LOOP_DEBUG_PERIOD 1000
-#define FAIL_WAIT_PERIOD 10
+#define FAIL_WAIT_PERIOD 1
+
+#define DISABLE_QUEUE 0
 
 #include "panel_config.h"
 #include "board_properties.h"
