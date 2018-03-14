@@ -57,8 +57,6 @@ void flush_serial_resend() {
         );
     #endif
 
-    SERIAL_OBJ.flush();
-
     delay(FAIL_WAIT_PERIOD);
 
     while(SERIAL_OBJ.available() > 0){
@@ -409,7 +407,6 @@ void setup()
     msg_buffer[0] = '\0';
 
     delay(1000);
-    SERIAL_OBJ.flush();
     error_code = init_panels();
     // Check that there are not too many panels or pixels for the board
     if (!error_code)
@@ -463,7 +460,6 @@ void setup()
         SER_SNPRINT_COMMENT_PSTR("SET: Clock Setup: OK");
     }
 
-    SERIAL_OBJ.flush();
 }
 
 void loop()
@@ -514,8 +510,6 @@ void loop()
             last_loop_debug = t_now;
             // last_loop_debug = 0;
         }
-
-        SERIAL_OBJ.flush();
     #endif
 
 
@@ -551,7 +545,6 @@ void loop()
                  debug_prefix, parser.command_letter, parser.codenum, (pixels_set - last_pixels_set),
                  process_cmd_time, parse_cmd_time, process_parsed_cmd_time
              );
-             SERIAL_OBJ.flush();
         #endif
         queue_advance_read();
     } else {
@@ -567,6 +560,7 @@ void loop()
             "%s: TIME: %d",
             debug_prefix, stopwatch_stop_0()
         );
-        SERIAL_OBJ.flush();
     #endif
+
+    SERIAL_OBJ.flush();
 }

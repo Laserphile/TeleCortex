@@ -26,25 +26,19 @@ int getFreeSram()
 
 void print_error(int error_code, char* message) {
     SER_SNPRINTF_ERR_PSTR("E%03d:", error_code);
-    SERIAL_OBJ.flush();
     SERIAL_OBJ.println(message);
     delay(FAIL_WAIT_PERIOD);
-    SERIAL_OBJ.flush();
 }
 
 void print_line_error(int linenum, int error_code, char* message) {
     SER_SNPRINTF_ERR_PSTR("N%d E%03d:", linenum, error_code);
-    SERIAL_OBJ.flush();
     SERIAL_OBJ.println(message);
     delay(FAIL_WAIT_PERIOD);
-    SERIAL_OBJ.flush();
 }
 
 void print_line_ok(int linenum) {
     SER_SNPRINTF_ERR_PSTR("N%d: OK", linenum);
-    SERIAL_OBJ.flush();
     SERIAL_OBJ.println();
-    SERIAL_OBJ.flush();
 }
 
 void blink()
