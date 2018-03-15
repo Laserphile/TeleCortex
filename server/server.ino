@@ -161,21 +161,19 @@ void get_serial_commands()
     // The index of the character in the line being read from serial.
     int serial_count = 0;
 
+    #if DEBUG_SERIAL
+        if(SERIAL_OBJ.available() > 0){
+            SER_SNPRINTF_COMMENT_PSTR("%s: Peek Serial Char is 0x%02x", debug_prefix, SERIAL_OBJ.peek());
+        }
+    #endif
+
     while ((queue_length() < MAX_QUEUE_LEN) && (SERIAL_OBJ.available() > 0))
     {
         // The character currently being read from serial
         char serial_char = SERIAL_OBJ.read();
-        #if DEBUG_QUEUE
-            if(serial_count == 0) {
-                SER_SNPRINTF_COMMENT_PSTR(
-                    "%s: serial char at %3d is: (%02x)",
-                    debug_prefix, serial_count, serial_char
-                );
-            }
-        #endif
         if (IS_EOL(serial_char))
         {
-            #if DEBUG_QUEUE
+            #if DEBUG_SERIAL
                 SER_SNPRINTF_COMMENT_PSTR("%s: serial char is EOL", debug_prefix);
                 debug_queue(debug_prefix);
             #endif

@@ -11,6 +11,7 @@
 #define DEBUG_GCODE 0
 #define DEBUG_TIMING 0
 #define DEBUG_QUEUE 0
+#define DEBUG_SERIAL 0
 
 /* Command processing flags */
 #define REQUIRE_CHECKSUM 1
