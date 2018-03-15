@@ -51,8 +51,6 @@ extern char err_buffer[BUFFLEN_ERR];
     strncpy((buff), (static_str), (size));
 #else
 #define STRNCPY_PSTR(buff, static_str, size) \
-    /* TODO: figure out why this causes */   \
-    /* so many errors */                     \
     strncpy_P((buff), PSTR(static_str), (size));
 #endif
 

@@ -396,7 +396,6 @@ int gcode_M2610() {
     #if DEBUG_GCODE
         SER_SNPRINT_COMMENT_PSTR("GCO: Calling M2610");
     #endif
-    // TODO: This
     FastLED.show();
     return 0;
 }
