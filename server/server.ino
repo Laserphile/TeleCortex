@@ -566,7 +566,7 @@ void loop()
         #endif
         queue_advance_read();
     } else {
-        if((idle_linenum < this_linenum) || (t_now - last_loop_idle > LOOP_IDLE_PERIOD)){
+        if(t_now - last_loop_idle > LOOP_IDLE_PERIOD){
             SER_SNPRINT_PSTR("IDLE");
             last_loop_idle = t_now;
             idle_linenum = this_linenum;
