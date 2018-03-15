@@ -13,6 +13,7 @@
 #include "macros.h"
 #include "queue.h"
 
+// The linenum of the last command parsed
 long last_parsed_linenum;
 
 /**
@@ -155,15 +156,20 @@ int validate_serial_special_fields(char *command)
 void get_serial_commands()
 {
     const char * debug_prefix = "GSC";
+
+    // The current buffer being used by get_serial_commands
     static char serial_line_buffer[MAX_CMD_SIZE];
     static bool serial_comment_mode = false;
 
     // The index of the character in the line being read from serial.
-    int serial_count = 0;
+    static int serial_count = 0;
 
     #if DEBUG_SERIAL
         if(SERIAL_OBJ.available() > 0){
-            SER_SNPRINTF_COMMENT_PSTR("%s: Peek Serial Char is 0x%02x", debug_prefix, SERIAL_OBJ.peek());
+            SER_SNPRINTF_COMMENT_PSTR(
+                "%s: Serial available, serial_count: %d; buff strlen: %d; peek: 0x%02x",
+                debug_prefix, serial_count, strlen(serial_line_buffer), SERIAL_OBJ.peek()
+            );
         }
     #endif
 
@@ -252,6 +258,16 @@ void get_serial_commands()
                 serial_line_buffer[serial_count++] = serial_char;
         }
     }
+
+    #if DEBUG_SERIAL
+        if(serial_count){
+            SER_SNPRINTF_COMMENT_PSTR(
+                "%s: Partial read serial (%d)",
+                debug_prefix, serial_count
+            );
+            debug_queue(debug_prefix);
+        }
+    #endif
 }
 
 /**
