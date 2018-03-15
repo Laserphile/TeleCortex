@@ -2,7 +2,7 @@
 #define __CONFIG_H__
 
 // Serial Baud rate
-#define SERIAL_BAUD 57600
+#define SERIAL_BAUD 1000000
 
 // debug flags
 #define DEBUG 0
