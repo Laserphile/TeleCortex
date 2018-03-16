@@ -20,6 +20,8 @@
 /* Display rainbows until receive GCode */
 #define RAINBOWS_UNTIL_GCODE 1
 
+#define APA_DATA_RATE 5
+
 // Maximum command length
 #define MAX_CMD_SIZE 260
 

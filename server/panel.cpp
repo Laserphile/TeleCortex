@@ -34,14 +34,14 @@ int init_panels()
     // This is such bullshit but you gotta do it like this because addLeds needs to know pins at compile time
     INIT_PANEL(PANEL_00_DATA_PIN, PANEL_00_CLK_PIN, PANEL_00_LEN);
 #if NEEDS_CLK
-    FastLED.addLeds<PANEL_TYPE, PANEL_00_DATA_PIN, PANEL_00_CLK_PIN>(panels[panel_count], PANEL_00_LEN);
+    FastLED.addLeds<PANEL_TYPE, PANEL_00_DATA_PIN, PANEL_00_CLK_PIN, RGB, DATA_RATE_MHZ(APA_DATA_RATE)>(panels[panel_count], PANEL_00_LEN);
 #else
     FastLED.addLeds<PANEL_TYPE, PANEL_00_DATA_PIN>(panels[panel_count], PANEL_00_LEN);
 #endif
     panel_count++;
     INIT_PANEL(PANEL_01_DATA_PIN, PANEL_01_CLK_PIN, PANEL_01_LEN);
 #if NEEDS_CLK
-    FastLED.addLeds<PANEL_TYPE, PANEL_01_DATA_PIN, PANEL_01_CLK_PIN>(panels[panel_count], PANEL_01_LEN);
+    FastLED.addLeds<PANEL_TYPE, PANEL_01_DATA_PIN, PANEL_01_CLK_PIN, RGB, DATA_RATE_MHZ(APA_DATA_RATE)>(panels[panel_count], PANEL_01_LEN);
 #else
     FastLED.addLeds<PANEL_TYPE, PANEL_01_DATA_PIN>(panels[panel_count], PANEL_01_LEN);
 #endif
@@ -49,14 +49,14 @@ int init_panels()
 
     INIT_PANEL(PANEL_02_DATA_PIN, PANEL_02_CLK_PIN, PANEL_02_LEN);
 #if NEEDS_CLK
-    FastLED.addLeds<PANEL_TYPE, PANEL_02_DATA_PIN, PANEL_02_CLK_PIN>(panels[panel_count], PANEL_02_LEN);
+    FastLED.addLeds<PANEL_TYPE, PANEL_02_DATA_PIN, PANEL_02_CLK_PIN, RGB, DATA_RATE_MHZ(APA_DATA_RATE)>(panels[panel_count], PANEL_02_LEN);
 #else
     FastLED.addLeds<PANEL_TYPE, PANEL_02_DATA_PIN>(panels[panel_count], PANEL_02_LEN);
 #endif
     panel_count++;
     INIT_PANEL(PANEL_03_DATA_PIN, PANEL_03_CLK_PIN, PANEL_03_LEN);
 #if NEEDS_CLK
-    FastLED.addLeds<PANEL_TYPE, PANEL_03_DATA_PIN, PANEL_03_CLK_PIN>(panels[panel_count], PANEL_03_LEN);
+    FastLED.addLeds<PANEL_TYPE, PANEL_03_DATA_PIN, PANEL_03_CLK_PIN, RGB, DATA_RATE_MHZ(APA_DATA_RATE)>(panels[panel_count], PANEL_03_LEN);
 #else
     FastLED.addLeds<PANEL_TYPE, PANEL_03_DATA_PIN>(panels[panel_count], PANEL_03_LEN);
 #endif
