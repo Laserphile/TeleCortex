@@ -62,6 +62,8 @@ int init_panels()
 #endif
     panel_count++;
 
+    FastLED.setBrightness(MAX_BRIGHTNESS);
+
     return reinit_panels();
 }
 

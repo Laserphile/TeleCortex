@@ -19,6 +19,7 @@
 
 /* Display rainbows until receive GCode */
 #define RAINBOWS_UNTIL_GCODE 1
+#define MAX_BRIGHTNESS 85
 
 #define APA_DATA_RATE 5
 
