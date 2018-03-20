@@ -148,8 +148,7 @@ void flush_serial_resend() {
  * Validate Checksum (*) and Line Number (N) Parameters if they exist in the command
  * Return error code
  */
-int validate_serial_special_fields(char *command)
-{
+int validate_serial_special_fields(char *command) {
     const char* debug_prefix = "VSF";
     char *npos = (*command == LINENUM_PREFIX) ? command : NULL; // Require the N parameter to start the line
     #if DEBUG_QUEUE
@@ -361,6 +360,7 @@ void get_available_commands()
  * TODO: move this to gcode.cpp
  */
 int gcode_M110(){
+    const char* debug_prefix = "GCO_M110";
 
     #if DEBUG_GCODE
         SER_SNPRINTF_COMMENT_PSTR("GCO: Calling M%d", parser.codenum);
@@ -369,7 +369,7 @@ int gcode_M110(){
     if (parser.seen('N')){
         long new_linenum = parser.value_long();
         #if DEBUG_GCODE
-            SER_SNPRINTF_COMMENT_PSTR("GCO: -> new_linenum: %d", new_linenum);
+            SER_SNPRINTF_COMMENT_PSTR("%s: -> new_linenum: %d", debug_prefix, new_linenum);
         #endif
         last_linenum = new_linenum;
     }
@@ -378,8 +378,9 @@ int gcode_M110(){
 }
 
 int gcode_M9999() {
+    const char* debug_prefix = "GCO_M9999";
     #if DEBUG_GCODE
-        SER_SNPRINTF_COMMENT_PSTR("GCO: Calling M%d", parser.codenum);
+        SER_SNPRINTF_COMMENT_PSTR("%s: Calling M%d", debug_prefix, parser.codenum);
     #endif
 
     sw_reset();
