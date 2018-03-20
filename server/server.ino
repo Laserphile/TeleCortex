@@ -12,6 +12,7 @@
 #include "b64.h"
 #include "macros.h"
 #include "queue.h"
+#include "eeprom.h"
 
 // The linenum of the last command parsed
 long last_parsed_linenum;
@@ -41,6 +42,80 @@ void sw_reset(){
         // Restarts program from beginning but does not reset the peripherals and registers
         asm volatile ("  jmp 0");
     #endif
+}
+
+/**
+ * Get EEPROM Commands
+ */
+void get_eeprom_commands() {
+    const char * debug_prefix = "GEC";
+
+    // The current buffer being used by get_eeprom_commands
+    static char eeprom_line_buffer[MAX_CMD_SIZE];
+    static bool eeprom_comment_mode = false;
+
+    // The index of the character in the line being read from eeprom.
+    static int eeprom_count = 0;
+
+    #if DEBUG_EEPROM
+        SER_SNPRINTF_COMMENT_PSTR("%s: Calling Get EEPROM Commands", debug_prefix);
+        SER_SNPRINTF_COMMENT_PSTR("%s: --> eeprom_count: %d", debug_prefix, eeprom_count);
+    #endif
+
+    while (eeprom_code_available() && (queue_length() < MAX_QUEUE_LEN)) {
+        char eeprom_char = eeprom_code_read();
+        if (IS_EOL(eeprom_char))
+        {
+            #if DEBUG_EEPROM
+                SER_SNPRINTF_COMMENT_PSTR("%s: eeprom char is EOL", debug_prefix);
+                debug_queue(debug_prefix);
+            #endif
+            eeprom_comment_mode = false; // end of line == end of comment
+
+            if (!eeprom_count)
+                continue; // Skip empty lines
+
+            eeprom_line_buffer[eeprom_count] = 0; // Terminate string
+            eeprom_count = 0;                     // Reset buffer
+
+            char *command = eeprom_line_buffer;
+
+            while (IS_SPACE(*command))
+                command++; // Skip leading spaces
+
+            this_linenum = -1;
+            enqueue_command(command);
+
+        }
+        else if (eeprom_count >= MAX_CMD_SIZE - 1)
+        {
+            // if (DEBUG_EEPROM) { SER_SNPRINTF_COMMENT_PSTR("GSC: serial count %d is larger than MAX_CMD_SIZE: %d, ignore", eeprom_count, MAX_CMD_SIZE); }
+            // Keep fetching, but ignore normal characters beyond the max length
+            // The command will be injected when EOL is reached
+        }
+        else if (eeprom_char == ESCAPE_PREFIX)
+        { // Handle escapes
+            // if (DEBUG_EEPROM) { SER_SNPRINT_COMMENT_PSTR("GSC: serial char is escape"); }
+            if (eeprom_code_available())
+            {
+                // if we have one more character, copy it over
+                eeprom_char = eeprom_code_read();
+                if (!eeprom_comment_mode)
+                    eeprom_line_buffer[eeprom_count++] = eeprom_char;
+            }
+            // otherwise do nothing
+        }
+        else
+        {
+            // if (DEBUG_QUEUE) { SER_SNPRINT_COMMENT_PSTR("GSC: serial char is regular"); }
+            // it's not a newline, carriage return or escape char
+            if (eeprom_char == COMMENT_PREFIX)
+                eeprom_comment_mode = true;
+            // So we can write it to the eeprom_line_buffer
+            if (!eeprom_comment_mode)
+                eeprom_line_buffer[eeprom_count++] = eeprom_char;
+        }
+    }
 }
 
 /**
@@ -277,6 +352,7 @@ void get_serial_commands()
  */
 void get_available_commands()
 {
+    get_eeprom_commands();
     get_serial_commands();
     // TODO: maybe read commands off SD card or other sources?
 }
@@ -325,6 +401,10 @@ int process_parsed_command() {
         {
         case 110:
             return gcode_M110();
+        case 508:
+            return gcode_M508();
+        case 509:
+            return gcode_M509();
         case 2600:
         case 2601:
         case 2602:

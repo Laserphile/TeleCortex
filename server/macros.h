@@ -27,6 +27,8 @@
     || (a == '/') \
     || (a == '+') \
 )
+#define IS_SINGLE_PRINTABLE(a) WITHIN(a, ' ', '~')
+
 #ifndef MIN
 #define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
 #endif

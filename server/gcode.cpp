@@ -210,6 +210,124 @@ bool validate_int_parameter_bounds(char parameter, int value, const int *min_val
  * GCode functions
  */
 
+/**
+* GCode M508
+* Write Code to EEPROM
+*/
+int gcode_M508() {
+    const char * debug_prefix = "GCO_M508";
+    int code_offset = 0;
+    char *code_payload = NULL;
+    int code_payload_len = 0;
+    static const int eeprom_code_len = EEPROM_CODE_END - EEPROM_CODE_START;
+
+    #if DEBUG_GCODE
+        SER_SNPRINTF_COMMENT_PSTR("%s: Calling M%d", debug_prefix, parser.codenum);
+    #endif
+
+    if (parser.seen('S')) {
+        code_offset = parser.value_int();
+        #if DEBUG_GCODE
+            SER_SNPRINTF_COMMENT_PSTR("%s: -> code_offset: %d", debug_prefix, code_offset);
+        #endif
+
+        int min_code_offset = 0;
+        if(!validate_int_parameter_bounds('S', code_offset, &min_code_offset, &eeprom_code_len)){
+            return 13;
+        }
+    }
+
+    if (parser.seen('V')) {
+        code_payload = parser.value_ptr;
+        code_payload_len = parser.arg_str_len;
+        #if DEBUG_GCODE
+            STRNCPY_PSTR(
+                fmt_buffer, "%c%s: -> payload: (%d) '%%n%%%ds'", BUFFLEN_FMT
+            );
+            snprintf(
+                msg_buffer, BUFFLEN_FMT, fmt_buffer,
+                COMMENT_PREFIX, debug_prefix, code_payload_len, code_payload_len
+            );
+            strncpy(fmt_buffer, msg_buffer, BUFFLEN_FMT);
+            int msg_offset = 0;
+            snprintf(
+                msg_buffer, BUFFLEN_MSG, fmt_buffer, &msg_offset, "");
+            strncpy(
+                msg_buffer + msg_offset, code_payload,
+                MIN(BUFFLEN_MSG - msg_offset, code_payload_len));
+            SERIAL_OBJ.println(msg_buffer);
+        #endif
+
+        // validate code_payload is base64
+        // TODO: This check might not be necessary if handled in parser
+        // Test with M2600 V/-//
+        char *p = code_payload;
+        int i = 0;
+        while((i < code_payload_len) && (p[i] != '\0')){
+            if(!IS_BASE64(p[i])){
+                SNPRINTF_MSG_PSTR(
+                    "panel payload is not encoded in base64. code_payload: %s offending char: %c, offending index: %d",
+                    code_payload, p, i
+                );
+                return 14;
+            }
+            i++;
+        }
+
+        //TODO: check payload is '\0' terminated?
+    }
+
+    // Validate code_payload not empty
+    // Test with M2600 V
+    if(code_payload_len <= 0){
+        SNPRINTF_MSG_PSTR(
+            "panel payload must not be empty",
+            NULL
+        );
+        return 14;
+    }
+
+    char eep_buffer[code_payload_len * 3 / 4];
+    int dec_len = base64_decode(eep_buffer, code_payload, code_payload_len);
+    #if DEBUG_GCODE
+        STRNCPY_PSTR(
+            fmt_buffer, "%c%s: -> decoded payload: (%d) 0x", BUFFLEN_FMT
+        );
+        snprintf(
+            msg_buffer, BUFFLEN_FMT, fmt_buffer,
+            COMMENT_PREFIX, debug_prefix, dec_len, dec_len * 2
+        );
+        strncpy(fmt_buffer, msg_buffer, BUFFLEN_FMT);
+        int offset_payload_start = snprintf(
+            msg_buffer, BUFFLEN_MSG, fmt_buffer
+        );
+        for(int i=0; i<dec_len; i++){
+            sprintf(
+                msg_buffer + offset_payload_start + i*2,
+                "%02x",
+                eep_buffer[i]
+            );
+        }
+        SERIAL_OBJ.println(msg_buffer);
+    #endif
+
+    for(int eep_count = 0; eep_count < dec_len; eep_count++){
+        int eep_addr = EEPROM_CODE_START + code_offset + eep_count;
+        EEPROM.write(eep_addr, eep_buffer[eep_count]);
+    }
+
+    return 0;
+}
+
+/**
+ * GCode M509
+ * Hexdump EEPROM
+ */
+int gcode_M509() {
+    dump_eeprom_code();
+    return 0;
+}
+
 inline bool panel_payload_gcode(){
     return (parser.codenum == 2600 || parser.codenum == 2601);
 }

@@ -195,10 +195,10 @@ class GCodeParser
 
 extern GCodeParser parser;
 
+int gcode_M508();
+int gcode_M509();
 int gcode_M260X();
-
 int gcode_M2610();
-
 int gcode_M2611();
 
 
