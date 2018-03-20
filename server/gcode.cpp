@@ -1,4 +1,7 @@
+#include "panel.h"
 #include "gcode.h"
+#include "eeprom.h"
+
 
 // Must be declared for allocation and to satisfy the linker
 // Zero values need no initialization.
@@ -182,6 +185,27 @@ void GCodeParser::debug()
 }
 #endif
 
+bool validate_int_parameter_bounds(char parameter, int value, const int *min_value = NULL, const int *max_value = NULL){
+    if((min_value != NULL) && (value < *min_value)){
+        SNPRINTF_MSG_PSTR(
+            "%c Parameter less than minimum %d: %d",
+            parameter, *min_value, value
+        );
+        return false;
+    }
+
+    if((max_value != NULL) && (value > *max_value)){
+        SNPRINTF_MSG_PSTR(
+            "%c Parameter greater than maximum %d: %d",
+            parameter, *max_value, value
+        );
+        return false;
+    }
+    return true;
+}
+
+// bool validate_base64_parameter(char parameter, char * value, int *min_length = NULL)
+
 /**
  * GCode functions
  */
@@ -196,6 +220,7 @@ inline bool panel_single_gcode(){
 
 int gcode_M260X()
 {
+    const char * debug_prefix = "GCO_M260X";
     int panel_number = 0;
     int pixel_offset = 0;
     char *panel_payload = NULL;
@@ -203,32 +228,21 @@ int gcode_M260X()
     int panel_len = 0;
 
     #if DEBUG_GCODE
-        SER_SNPRINTF_COMMENT_PSTR("GCO: Calling M%d", parser.codenum);
+        SER_SNPRINTF_COMMENT_PSTR("%s: Calling M%d", debug_prefix, parser.codenum);
     #endif
 
     if (parser.seen('Q'))
     {
         panel_number = parser.value_int();
         #if DEBUG_GCODE
-            SER_SNPRINTF_COMMENT_PSTR("GCO: -> panel_number: %d", panel_number);
+            SER_SNPRINTF_COMMENT_PSTR("%s: -> panel_number: %d", debug_prefix, panel_number);
         #endif
         // validate panel_number
 
-        // Test with M2600 V-1
-        if(panel_number < 0){
-            SNPRINTF_MSG_PSTR(
-                "Negative panel number? panel_number: %d",
-                panel_number
-            );
-            return 12;
-        }
+        int min_panel_number = 0;
+        int max_panel_number = MAX_PANELS;
 
-        // Test with M2600 V1000
-        if(panel_number >= MAX_PANELS){
-            SNPRINTF_MSG_PSTR(
-                "panel number too big. panel_number: %d, MAX_PANELS: %d",
-                panel_number, MAX_PANELS
-            );
+        if(!validate_int_parameter_bounds('Q', panel_number, &min_panel_number, &max_panel_number)){
             return 12;
         }
     }
@@ -239,25 +253,13 @@ int gcode_M260X()
     {
         pixel_offset = parser.value_int();
         #if DEBUG_GCODE
-            SER_SNPRINTF_COMMENT_PSTR("GCO: -> pixel_offset: %d", pixel_offset);
+            SER_SNPRINTF_COMMENT_PSTR("%s: -> pixel_offset: %d", debug_prefix, pixel_offset);
         #endif
 
-        // validate pixel_offset
+        int min_pixel_offset = 0;
+        int max_pixel_offset = panel_len - 1;
 
-        // Test with M2600 S-1
-        if(pixel_offset < 0){
-            SNPRINTF_MSG_PSTR(
-                "Negative pixel offset? pixel_offset: %d",
-                pixel_offset
-            );
-            return 13;
-        }
-        // Test with M2600 S1000
-        if(pixel_offset >= panel_len){
-            SNPRINTF_MSG_PSTR(
-                "pixel offset too big for panel. pixel_offset: %d, panel_len: %d",
-                pixel_offset, panel_len
-            );
+        if(!validate_int_parameter_bounds('S', pixel_offset, &min_pixel_offset, &max_pixel_offset)){
             return 13;
         }
     }
@@ -267,10 +269,10 @@ int gcode_M260X()
         panel_payload_len = parser.arg_str_len;
         #if DEBUG_GCODE
             STRNCPY_PSTR(
-                fmt_buffer, "%cGCO: -> payload: (%d) '%%n%%%ds'", BUFFLEN_FMT);
+                fmt_buffer, "%c%s: -> payload: (%d) '%%n%%%ds'", BUFFLEN_FMT);
             snprintf(
                 msg_buffer, BUFFLEN_FMT, fmt_buffer,
-                COMMENT_PREFIX, panel_payload_len, panel_payload_len);
+                COMMENT_PREFIX, debug_prefix, panel_payload_len, panel_payload_len);
             strncpy(fmt_buffer, msg_buffer, BUFFLEN_FMT);
             int msg_offset = 0;
             snprintf(
@@ -342,10 +344,11 @@ int gcode_M260X()
         char fake_panel[panel_len];
         int dec_len = base64_decode(fake_panel, panel_payload, panel_payload_len);
         STRNCPY_PSTR(
-            fmt_buffer, "%cGCO: -> decoded payload: (%d) 0x", BUFFLEN_FMT);
+            fmt_buffer, "%c%s: -> decoded payload: (%d) 0x", BUFFLEN_FMT);
         snprintf(
             msg_buffer, BUFFLEN_FMT, fmt_buffer,
-            COMMENT_PREFIX, dec_len, dec_len * 2);
+            debug_prefix, COMMENT_PREFIX, dec_len, dec_len * 2
+        );
         strncpy(fmt_buffer, msg_buffer, BUFFLEN_FMT);
         int offset_payload_start = snprintf(
             msg_buffer, BUFFLEN_MSG, fmt_buffer
@@ -393,8 +396,9 @@ int gcode_M260X()
 }
 
 int gcode_M2610() {
+    const char * debug_prefix = "GCO";
     #if DEBUG_GCODE
-        SER_SNPRINT_COMMENT_PSTR("GCO: Calling M2610");
+        SER_SNPRINTF_COMMENT_PSTR("%s: Calling M2610", debug_prefix);
     #endif
     FastLED.show();
     return 0;

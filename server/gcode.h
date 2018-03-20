@@ -3,7 +3,6 @@
 
 #include <Arduino.h>
 
-#include "panel.h"
 #include "config.h"
 #include "types.h"
 #include "serial.h"
