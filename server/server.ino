@@ -513,7 +513,7 @@ void setup()
     {
         if (pixel_count <= 0)
         {
-            error_code = 01;
+            error_code = 05;
             SNPRINTF_MSG_PSTR("SET: pixel_count is %d. No pixels defined. Exiting", pixel_count);
             stop();
         }
