@@ -18,11 +18,11 @@ bool eeprom_magic_present() {
     // eeprom_header_buffer[eeprom_magic_len] = '\0';
     bool response = (strstr(eeprom_header_buffer, eeprom_magic) != NULL);
     // bool response = strstr(eeprom_header_buffer, eeprom_magic);
-    #if DEBUG_EEPROM
-        SER_SNPRINTF_COMMENT_PSTR("%s: -> eeprom_header_buffer: '%s'", debug_prefix, eeprom_header_buffer);
-        SER_SNPRINTF_COMMENT_PSTR("%s: -> eeprom_magic        : '%s'", debug_prefix, eeprom_magic);
-        SER_SNPRINTF_COMMENT_PSTR("%s: -> response            : %d", debug_prefix, response);
-    #endif
+    // #if DEBUG_EEPROM
+    //     SER_SNPRINTF_COMMENT_PSTR("%s: -> eeprom_header_buffer: '%s'", debug_prefix, eeprom_header_buffer);
+    //     SER_SNPRINTF_COMMENT_PSTR("%s: -> eeprom_magic        : '%s'", debug_prefix, eeprom_magic);
+    //     SER_SNPRINTF_COMMENT_PSTR("%s: -> response            : %d", debug_prefix, response);
+    // #endif
     return response;
 }
 
@@ -39,7 +39,7 @@ void write_eeprom_code(const char * code, int offset = 0){
 void dump_eeprom_code() {
     int chunk_size = 16;
 
-    for(int chunk_start = EEPROM_CODE_START; chunk_start < (EEPROM_CODE_END - chunk_size); chunk_start += chunk_size){
+    for(int chunk_start = 0; chunk_start < (EEPROM_CODE_END - chunk_size); chunk_start += chunk_size){
         STRNCPY_PSTR(fmt_buffer, "%c %04x :", BUFFLEN_FMT);
         snprintf(
             msg_buffer, BUFFLEN_FMT, fmt_buffer,

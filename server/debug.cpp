@@ -36,6 +36,11 @@ void print_line_error(int linenum, int error_code, char* message) {
     delay(FAIL_WAIT_PERIOD);
 }
 
+void print_line_response(int linenum, char* message) {
+    SER_SNPRINTF_ERR_PSTR("N%d: ", linenum);
+    SERIAL_OBJ.println(message);
+}
+
 void print_line_ok(int linenum) {
     SER_SNPRINTF_ERR_PSTR("N%d: OK", linenum);
     SERIAL_OBJ.println();

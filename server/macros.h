@@ -3,6 +3,8 @@
 
 #define FORCE_INLINE __attribute__((always_inline)) inline
 
+#define UNUSED(x) (void) (x)
+
 // Macros to contrain values
 #define NOLESS(v, n) do { if (v < n) v = n; } while (0)
 #define NOMORE(v, n) do { if (v > n) v = n; } while (0)

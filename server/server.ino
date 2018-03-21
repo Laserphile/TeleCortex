@@ -3,6 +3,7 @@
 #include <FastLED.h>
 
 #include "config.h"
+#include "settings.h"
 #include "clock.h"
 #include "gcode.h"
 #include "panel.h"
@@ -377,6 +378,81 @@ int gcode_M110(){
     return 0;
 }
 
+/**
+ * M500: Store settings in EEPROM
+ */
+inline void gcode_M500() {
+	(void)settings.save();
+}
+
+/**
+ * M501: Read settings from EEPROM
+ */
+inline void gcode_M501() {
+	(void)settings.load();
+}
+
+/**
+ * M502: Revert to default settings
+ */
+inline void gcode_M502() {
+	(void)settings.reset();
+}
+
+#if !DISABLE_M503
+/**
+ * M503: print settings currently in memory
+ */
+inline void gcode_M503() {
+	(void)settings.report(parser.seen('S') && !parser.value_bool());
+}
+#endif
+
+/**
+ * GCode P2205
+ * Get Unique Controller ID
+ */
+inline void gcode_P2205() {
+    SNPRINTF_MSG_PSTR("S%d", controller_id);
+    if(parser.linenum > 0){
+        print_line_response(parser.linenum, msg_buffer);
+    } else {
+        SERIAL_OBJ.println(msg_buffer);
+    }
+}
+
+/**
+ * GCode M2205
+ * Set Unique Controller ID
+ */
+int gcode_M2205() {
+    const char *debug_prefix = "GCO";
+    if(parser.seen('S')){
+        int new_controller_id = parser.value_int();
+        #if DEBUG_GCODE
+            SER_SNPRINTF_COMMENT_PSTR("%s: -> new_controller_id: %d", debug_prefix, new_controller_id);
+        #endif
+        controller_id = new_controller_id;
+    }
+    return 0;
+}
+
+/**
+ * GCode P2206
+ * Get Global Brightness
+ */
+int gcode_P2206() {
+    return 0;
+}
+
+/**
+ * GCode M2205
+ * Set Global Brightness
+ */
+int gcode_M2206() {
+    return 0;
+}
+
 int gcode_M9999() {
     const char* debug_prefix = "GCO_M9999";
     #if DEBUG_GCODE
@@ -402,10 +478,20 @@ int process_parsed_command() {
         {
         case 110:
             return gcode_M110();
+        case 500:
+            gcode_M500(); return 0;
+        case 501:
+            gcode_M501(); return 0;
+        case 502:
+            gcode_M502(); return 0;
+        case 503:
+            gcode_M503(); return 0;
         case 508:
             return gcode_M508();
         case 509:
             return gcode_M509();
+        case 2205:
+            return gcode_M2205();
         case 2600:
         case 2601:
         case 2602:
@@ -421,6 +507,8 @@ int process_parsed_command() {
     case 'P':
         switch (parser.codenum)
         {
+        case 2205:
+            gcode_P2205(); return 0;
         default:
             return parser.unknown_command_error();
         }
@@ -484,23 +572,23 @@ void process_next_command()
 void setup()
 {
     // initialize serial
-    #if DEBUG
-        blink();
-    #endif
+    // TODO: move this to serial.cpp
     SERIAL_OBJ.begin(SERIAL_BAUD);
+
+    // Load data from EEPROM if available (or use defaults)
+	// This also updates variables in the planner, elsewhere
+	(void)settings.load();
+
+    // TODO: move this to settings.report
 
     SER_SNPRINTF_MSG("\n");
     #if DEBUG
         SER_SNPRINTF_COMMENT_PSTR("SET: detected board: %s", DETECTED_BOARD);
         SER_SNPRINTF_COMMENT_PSTR("SET: sram size: %d", SRAM_SIZE);
         SER_SNPRINTF_COMMENT_PSTR("SET: Free SRAM %d", getFreeSram());
-        // SER_SNPRINTF_COMMENT_PSTR("SET: Debug flag: %d", DEBUG);
-        // SER_SNPRINTF_COMMENT_PSTR("SET: Debug Panel flag: %d", DEBUG_PANEL);
-        // SER_SNPRINTF_COMMENT_PSTR("SET: Debug loop flag: %d", DEBUG_LOOP);
+        // TODO: convert these to settings
         SER_SNPRINTF_COMMENT_PSTR("SET: MAX_QUEUE_LEN: %d", MAX_QUEUE_LEN);
         SER_SNPRINTF_COMMENT_PSTR("SET: MAX_CMD_SIZE: %d", MAX_CMD_SIZE);
-        // SER_SNPRINTF_COMMENT_PSTR("SET: this_linenum: %d", this_linenum);
-        // SER_SNPRINTF_COMMENT_PSTR("SET: last_linenum: %d", last_linenum);
     #endif
 
     // Clear out buffer

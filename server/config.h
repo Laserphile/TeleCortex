@@ -21,6 +21,7 @@
 /* Display rainbows until receive GCode */
 #define RAINBOWS_UNTIL_GCODE 1
 #define MAX_BRIGHTNESS 85
+#define EEPROM_SETTINGS 1
 
 #define APA_DATA_RATE 5
 
@@ -37,6 +38,13 @@
 #define FAIL_WAIT_PERIOD 0
 
 #define DISABLE_QUEUE 0
+#define DISABLE_M503 0
+
+/**
+ * Defaults
+ * These get over-written by settings
+ */
+#define DEFAULT_CONTROLLER_ID 0
 
 #include "panel_config.h"
 #include "board_properties.h"
