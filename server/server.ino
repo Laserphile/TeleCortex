@@ -58,10 +58,10 @@ void get_eeprom_commands() {
     // The index of the character in the line being read from eeprom.
     static int eeprom_count = 0;
 
-    #if DEBUG_EEPROM
-        SER_SNPRINTF_COMMENT_PSTR("%s: Calling Get EEPROM Commands", debug_prefix);
-        SER_SNPRINTF_COMMENT_PSTR("%s: --> eeprom_count: %d", debug_prefix, eeprom_count);
-    #endif
+    // #if DEBUG_EEPROM
+    //     SER_SNPRINTF_COMMENT_PSTR("%s: Calling Get EEPROM Commands", debug_prefix);
+    //     SER_SNPRINTF_COMMENT_PSTR("%s: --> eeprom_count: %d", debug_prefix, eeprom_count);
+    // #endif
 
     while (eeprom_code_available() && (queue_length() < MAX_QUEUE_LEN)) {
         char eeprom_char = eeprom_code_read();
