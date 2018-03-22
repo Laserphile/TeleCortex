@@ -23,14 +23,11 @@
 
 /* Determine if EEPROM has been correctly initialized */
 bool eeprom_magic_present();
-
-void write_eeprom_code(char * code, int offset = 0);
+void write_eeprom_code(const char * code, int offset);
 
 /* Dump the EEPROM to serial */
 void dump_eeprom_code();
-
 bool eeprom_code_available();
-
 char eeprom_code_read();
 
 #endif /* __EEPROM_H__ */

@@ -311,10 +311,11 @@ int gcode_M508() {
         SERIAL_OBJ.println(msg_buffer);
     #endif
 
-    for(int eep_count = 0; eep_count < dec_len; eep_count++){
-        int eep_addr = EEPROM_CODE_START + code_offset + eep_count;
-        EEPROM.write(eep_addr, eep_buffer[eep_count]);
-    }
+    write_eeprom_code(eep_buffer, code_offset);
+    // for(int eep_count = 0; eep_count < dec_len; eep_count++){
+    //     int eep_addr = EEPROM_CODE_START + code_offset + eep_count;
+    //     EEPROM.write(eep_addr, eep_buffer[eep_count]);
+    // }
 
     return 0;
 }

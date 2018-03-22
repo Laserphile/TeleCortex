@@ -26,10 +26,26 @@ bool eeprom_magic_present() {
     return response;
 }
 
-void write_eeprom_code(const char * code, int offset = 0){
+void write_eeprom_code(const char * code, int offset){
+    #if DEBUG_EEPROM
+    SER_SNPRINTF_COMMENT_PSTR(
+        "calling write_eeprom_code with %s at %d",
+        code, offset
+    );
+    SER_SNPRINTF_COMMENT_PSTR(
+        "EEPROM_CODE_START: %04x, EEPROM_CODE_END: %04x",
+        EEPROM_CODE_START, EEPROM_CODE_END
+    );
+    #endif
     char * code_write = (char *)code;
     int write_address = EEPROM_CODE_START + offset;
     while( (write_address < EEPROM_CODE_END) && (*code_write != '\0') ){
+        #if DEBUG_EEPROM
+        SER_SNPRINTF_COMMENT_PSTR(
+            "rewriting %04x with %c",
+            write_address, *code_write
+        );
+        #endif
         EEPROM.update(write_address, *code_write);
         code_write++;
         write_address++;
