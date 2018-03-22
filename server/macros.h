@@ -3,6 +3,8 @@
 
 #define FORCE_INLINE __attribute__((always_inline)) inline
 
+#define UNUSED(x) (void) (x)
+
 // Macros to contrain values
 #define NOLESS(v, n) do { if (v < n) v = n; } while (0)
 #define NOMORE(v, n) do { if (v > n) v = n; } while (0)
@@ -27,6 +29,8 @@
     || (a == '/') \
     || (a == '+') \
 )
+#define IS_SINGLE_PRINTABLE(a) WITHIN(a, ' ', '~')
+
 #ifndef MIN
 #define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
 #endif

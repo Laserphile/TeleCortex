@@ -35,10 +35,9 @@ extern int error_code;
 int getFreeSram();
 
 void print_error(int error_code, char* message);
-
 void print_line_error(int linenum, int error_code, char* message);
-
 void print_line_ok(int linenum);
+void print_line_response(int linenum, char* message);
 
 void blink();
 

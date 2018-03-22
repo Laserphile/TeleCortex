@@ -1,4 +1,7 @@
+#include "panel.h"
 #include "gcode.h"
+#include "eeprom.h"
+
 
 // Must be declared for allocation and to satisfy the linker
 // Zero values need no initialization.
@@ -182,9 +185,149 @@ void GCodeParser::debug()
 }
 #endif
 
+bool validate_int_parameter_bounds(char parameter, int value, const int *min_value = NULL, const int *max_value = NULL){
+    if((min_value != NULL) && (value < *min_value)){
+        SNPRINTF_MSG_PSTR(
+            "%c Parameter less than minimum %d: %d",
+            parameter, *min_value, value
+        );
+        return false;
+    }
+
+    if((max_value != NULL) && (value > *max_value)){
+        SNPRINTF_MSG_PSTR(
+            "%c Parameter greater than maximum %d: %d",
+            parameter, *max_value, value
+        );
+        return false;
+    }
+    return true;
+}
+
+// bool validate_base64_parameter(char parameter, char * value, int *min_length = NULL)
+
 /**
  * GCode functions
  */
+
+/**
+* GCode M508
+* Write Code to EEPROM
+*/
+int gcode_M508() {
+    const char * debug_prefix = "GCO_M508";
+    int code_offset = 0;
+    char *code_payload = NULL;
+    int code_payload_len = 0;
+    static const int eeprom_code_len = EEPROM_CODE_END - EEPROM_CODE_START;
+
+    #if DEBUG_GCODE
+        SER_SNPRINTF_COMMENT_PSTR("%s: Calling M%d", debug_prefix, parser.codenum);
+    #endif
+
+    if (parser.seen('S')) {
+        code_offset = parser.value_int();
+        #if DEBUG_GCODE
+            SER_SNPRINTF_COMMENT_PSTR("%s: -> code_offset: %d", debug_prefix, code_offset);
+        #endif
+
+        int min_code_offset = 0;
+        if(!validate_int_parameter_bounds('S', code_offset, &min_code_offset, &eeprom_code_len)){
+            return 13;
+        }
+    }
+
+    if (parser.seen('V')) {
+        code_payload = parser.value_ptr;
+        code_payload_len = parser.arg_str_len;
+        #if DEBUG_GCODE
+            STRNCPY_PSTR(
+                fmt_buffer, "%c%s: -> payload: (%d) '%%n%%%ds'", BUFFLEN_FMT
+            );
+            snprintf(
+                msg_buffer, BUFFLEN_FMT, fmt_buffer,
+                COMMENT_PREFIX, debug_prefix, code_payload_len, code_payload_len
+            );
+            strncpy(fmt_buffer, msg_buffer, BUFFLEN_FMT);
+            int msg_offset = 0;
+            snprintf(
+                msg_buffer, BUFFLEN_MSG, fmt_buffer, &msg_offset, "");
+            strncpy(
+                msg_buffer + msg_offset, code_payload,
+                MIN(BUFFLEN_MSG - msg_offset, code_payload_len));
+            SERIAL_OBJ.println(msg_buffer);
+        #endif
+
+        // validate code_payload is base64
+        // TODO: This check might not be necessary if handled in parser
+        // Test with M2600 V/-//
+        char *p = code_payload;
+        int i = 0;
+        while((i < code_payload_len) && (p[i] != '\0')){
+            if(!IS_BASE64(p[i])){
+                SNPRINTF_MSG_PSTR(
+                    "panel payload is not encoded in base64. code_payload: %s offending char: %c, offending index: %d",
+                    code_payload, p, i
+                );
+                return 14;
+            }
+            i++;
+        }
+
+        //TODO: check payload is '\0' terminated?
+    }
+
+    // Validate code_payload not empty
+    // Test with M2600 V
+    if(code_payload_len <= 0){
+        SNPRINTF_MSG_PSTR(
+            "panel payload must not be empty",
+            NULL
+        );
+        return 14;
+    }
+
+    char eep_buffer[code_payload_len * 3 / 4];
+    int dec_len = base64_decode(eep_buffer, code_payload, code_payload_len);
+    #if DEBUG_GCODE
+        STRNCPY_PSTR(
+            fmt_buffer, "%c%s: -> decoded payload: (%d) 0x", BUFFLEN_FMT
+        );
+        snprintf(
+            msg_buffer, BUFFLEN_FMT, fmt_buffer,
+            COMMENT_PREFIX, debug_prefix, dec_len, dec_len * 2
+        );
+        strncpy(fmt_buffer, msg_buffer, BUFFLEN_FMT);
+        int offset_payload_start = snprintf(
+            msg_buffer, BUFFLEN_MSG, fmt_buffer
+        );
+        for(int i=0; i<dec_len; i++){
+            sprintf(
+                msg_buffer + offset_payload_start + i*2,
+                "%02x",
+                eep_buffer[i]
+            );
+        }
+        SERIAL_OBJ.println(msg_buffer);
+    #endif
+
+    write_eeprom_code(eep_buffer, code_offset);
+    // for(int eep_count = 0; eep_count < dec_len; eep_count++){
+    //     int eep_addr = EEPROM_CODE_START + code_offset + eep_count;
+    //     EEPROM.write(eep_addr, eep_buffer[eep_count]);
+    // }
+
+    return 0;
+}
+
+/**
+ * GCode M509
+ * Hexdump EEPROM
+ */
+int gcode_M509() {
+    dump_eeprom_code();
+    return 0;
+}
 
 inline bool panel_payload_gcode(){
     return (parser.codenum == 2600 || parser.codenum == 2601);
@@ -196,6 +339,7 @@ inline bool panel_single_gcode(){
 
 int gcode_M260X()
 {
+    const char * debug_prefix = "GCO_M260X";
     int panel_number = 0;
     int pixel_offset = 0;
     char *panel_payload = NULL;
@@ -203,32 +347,21 @@ int gcode_M260X()
     int panel_len = 0;
 
     #if DEBUG_GCODE
-        SER_SNPRINTF_COMMENT_PSTR("GCO: Calling M%d", parser.codenum);
+        SER_SNPRINTF_COMMENT_PSTR("%s: Calling M%d", debug_prefix, parser.codenum);
     #endif
 
     if (parser.seen('Q'))
     {
         panel_number = parser.value_int();
         #if DEBUG_GCODE
-            SER_SNPRINTF_COMMENT_PSTR("GCO: -> panel_number: %d", panel_number);
+            SER_SNPRINTF_COMMENT_PSTR("%s: -> panel_number: %d", debug_prefix, panel_number);
         #endif
         // validate panel_number
 
-        // Test with M2600 V-1
-        if(panel_number < 0){
-            SNPRINTF_MSG_PSTR(
-                "Negative panel number? panel_number: %d",
-                panel_number
-            );
-            return 12;
-        }
+        int min_panel_number = 0;
+        int max_panel_number = MAX_PANELS;
 
-        // Test with M2600 V1000
-        if(panel_number >= MAX_PANELS){
-            SNPRINTF_MSG_PSTR(
-                "panel number too big. panel_number: %d, MAX_PANELS: %d",
-                panel_number, MAX_PANELS
-            );
+        if(!validate_int_parameter_bounds('Q', panel_number, &min_panel_number, &max_panel_number)){
             return 12;
         }
     }
@@ -239,25 +372,13 @@ int gcode_M260X()
     {
         pixel_offset = parser.value_int();
         #if DEBUG_GCODE
-            SER_SNPRINTF_COMMENT_PSTR("GCO: -> pixel_offset: %d", pixel_offset);
+            SER_SNPRINTF_COMMENT_PSTR("%s: -> pixel_offset: %d", debug_prefix, pixel_offset);
         #endif
 
-        // validate pixel_offset
+        int min_pixel_offset = 0;
+        int max_pixel_offset = panel_len - 1;
 
-        // Test with M2600 S-1
-        if(pixel_offset < 0){
-            SNPRINTF_MSG_PSTR(
-                "Negative pixel offset? pixel_offset: %d",
-                pixel_offset
-            );
-            return 13;
-        }
-        // Test with M2600 S1000
-        if(pixel_offset >= panel_len){
-            SNPRINTF_MSG_PSTR(
-                "pixel offset too big for panel. pixel_offset: %d, panel_len: %d",
-                pixel_offset, panel_len
-            );
+        if(!validate_int_parameter_bounds('S', pixel_offset, &min_pixel_offset, &max_pixel_offset)){
             return 13;
         }
     }
@@ -267,10 +388,10 @@ int gcode_M260X()
         panel_payload_len = parser.arg_str_len;
         #if DEBUG_GCODE
             STRNCPY_PSTR(
-                fmt_buffer, "%cGCO: -> payload: (%d) '%%n%%%ds'", BUFFLEN_FMT);
+                fmt_buffer, "%c%s: -> payload: (%d) '%%n%%%ds'", BUFFLEN_FMT);
             snprintf(
                 msg_buffer, BUFFLEN_FMT, fmt_buffer,
-                COMMENT_PREFIX, panel_payload_len, panel_payload_len);
+                COMMENT_PREFIX, debug_prefix, panel_payload_len, panel_payload_len);
             strncpy(fmt_buffer, msg_buffer, BUFFLEN_FMT);
             int msg_offset = 0;
             snprintf(
@@ -342,10 +463,11 @@ int gcode_M260X()
         char fake_panel[panel_len];
         int dec_len = base64_decode(fake_panel, panel_payload, panel_payload_len);
         STRNCPY_PSTR(
-            fmt_buffer, "%cGCO: -> decoded payload: (%d) 0x", BUFFLEN_FMT);
+            fmt_buffer, "%c%s: -> decoded payload: (%d) 0x", BUFFLEN_FMT);
         snprintf(
             msg_buffer, BUFFLEN_FMT, fmt_buffer,
-            COMMENT_PREFIX, dec_len, dec_len * 2);
+            debug_prefix, COMMENT_PREFIX, dec_len, dec_len * 2
+        );
         strncpy(fmt_buffer, msg_buffer, BUFFLEN_FMT);
         int offset_payload_start = snprintf(
             msg_buffer, BUFFLEN_MSG, fmt_buffer
@@ -393,8 +515,9 @@ int gcode_M260X()
 }
 
 int gcode_M2610() {
+    const char * debug_prefix = "GCO";
     #if DEBUG_GCODE
-        SER_SNPRINT_COMMENT_PSTR("GCO: Calling M2610");
+        SER_SNPRINTF_COMMENT_PSTR("%s: Calling M2610", debug_prefix);
     #endif
     FastLED.show();
     return 0;

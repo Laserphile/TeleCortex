@@ -12,6 +12,7 @@
 #define DEBUG_TIMING 0
 #define DEBUG_QUEUE 0
 #define DEBUG_SERIAL 0
+#define DEBUG_EEPROM 0
 
 /* Command processing flags */
 #define REQUIRE_CHECKSUM 1
@@ -19,7 +20,9 @@
 
 /* Display rainbows until receive GCode */
 #define RAINBOWS_UNTIL_GCODE 1
+#define ENABLE_GAMMA_CORRECTION 1
 #define MAX_BRIGHTNESS 85
+#define EEPROM_SETTINGS 1
 
 #define APA_DATA_RATE 5
 
@@ -31,11 +34,18 @@
 
 // TIMING
 #define LOOP_WAIT_PERIOD 0
-#define LOOP_IDLE_PERIOD 100
+#define LOOP_IDLE_PERIOD 1000
 #define LOOP_DEBUG_PERIOD 1000
 #define FAIL_WAIT_PERIOD 0
 
 #define DISABLE_QUEUE 0
+#define DISABLE_M503 0
+
+/**
+ * Defaults
+ * These get over-written by settings
+ */
+#define DEFAULT_CONTROLLER_ID 0
 
 #include "panel_config.h"
 #include "board_properties.h"

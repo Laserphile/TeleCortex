@@ -2,7 +2,10 @@
 #include <TimeLib.h>
 #include <FastLED.h>
 
+#include "server.h"
+
 #include "config.h"
+#include "settings.h"
 #include "clock.h"
 #include "gcode.h"
 #include "panel.h"
@@ -12,6 +15,7 @@
 #include "b64.h"
 #include "macros.h"
 #include "queue.h"
+#include "eeprom.h"
 
 // The linenum of the last command parsed
 long last_parsed_linenum;
@@ -44,6 +48,80 @@ void sw_reset(){
 }
 
 /**
+ * Get EEPROM Commands
+ */
+void get_eeprom_commands() {
+    const char * debug_prefix = "GEC";
+
+    // The current buffer being used by get_eeprom_commands
+    static char eeprom_line_buffer[MAX_CMD_SIZE];
+    static bool eeprom_comment_mode = false;
+
+    // The index of the character in the line being read from eeprom.
+    static int eeprom_count = 0;
+
+    // #if DEBUG_EEPROM
+    //     SER_SNPRINTF_COMMENT_PSTR("%s: Calling Get EEPROM Commands", debug_prefix);
+    //     SER_SNPRINTF_COMMENT_PSTR("%s: --> eeprom_count: %d", debug_prefix, eeprom_count);
+    // #endif
+
+    while (eeprom_code_available() && (queue_length() < MAX_QUEUE_LEN)) {
+        char eeprom_char = eeprom_code_read();
+        if (IS_EOL(eeprom_char))
+        {
+            #if DEBUG_EEPROM
+                SER_SNPRINTF_COMMENT_PSTR("%s: eeprom char is EOL", debug_prefix);
+                debug_queue(debug_prefix);
+            #endif
+            eeprom_comment_mode = false; // end of line == end of comment
+
+            if (!eeprom_count)
+                continue; // Skip empty lines
+
+            eeprom_line_buffer[eeprom_count] = 0; // Terminate string
+            eeprom_count = 0;                     // Reset buffer
+
+            char *command = eeprom_line_buffer;
+
+            while (IS_SPACE(*command))
+                command++; // Skip leading spaces
+
+            this_linenum = -1;
+            enqueue_command(command);
+
+        }
+        else if (eeprom_count >= MAX_CMD_SIZE - 1)
+        {
+            // if (DEBUG_EEPROM) { SER_SNPRINTF_COMMENT_PSTR("GSC: serial count %d is larger than MAX_CMD_SIZE: %d, ignore", eeprom_count, MAX_CMD_SIZE); }
+            // Keep fetching, but ignore normal characters beyond the max length
+            // The command will be injected when EOL is reached
+        }
+        else if (eeprom_char == ESCAPE_PREFIX)
+        { // Handle escapes
+            // if (DEBUG_EEPROM) { SER_SNPRINT_COMMENT_PSTR("GSC: serial char is escape"); }
+            if (eeprom_code_available())
+            {
+                // if we have one more character, copy it over
+                eeprom_char = eeprom_code_read();
+                if (!eeprom_comment_mode)
+                    eeprom_line_buffer[eeprom_count++] = eeprom_char;
+            }
+            // otherwise do nothing
+        }
+        else
+        {
+            // if (DEBUG_QUEUE) { SER_SNPRINT_COMMENT_PSTR("GSC: serial char is regular"); }
+            // it's not a newline, carriage return or escape char
+            if (eeprom_char == COMMENT_PREFIX)
+                eeprom_comment_mode = true;
+            // So we can write it to the eeprom_line_buffer
+            if (!eeprom_comment_mode)
+                eeprom_line_buffer[eeprom_count++] = eeprom_char;
+        }
+    }
+}
+
+/**
  * Flush serial and command queue then request resend
  */
 void flush_serial_resend() {
@@ -73,8 +151,7 @@ void flush_serial_resend() {
  * Validate Checksum (*) and Line Number (N) Parameters if they exist in the command
  * Return error code
  */
-int validate_serial_special_fields(char *command)
-{
+int validate_serial_special_fields(char *command) {
     const char* debug_prefix = "VSF";
     char *npos = (*command == LINENUM_PREFIX) ? command : NULL; // Require the N parameter to start the line
     #if DEBUG_QUEUE
@@ -277,6 +354,7 @@ void get_serial_commands()
  */
 void get_available_commands()
 {
+    get_eeprom_commands();
     get_serial_commands();
     // TODO: maybe read commands off SD card or other sources?
 }
@@ -285,6 +363,7 @@ void get_available_commands()
  * TODO: move this to gcode.cpp
  */
 int gcode_M110(){
+    const char* debug_prefix = "GCO_M110";
 
     #if DEBUG_GCODE
         SER_SNPRINTF_COMMENT_PSTR("GCO: Calling M%d", parser.codenum);
@@ -293,7 +372,7 @@ int gcode_M110(){
     if (parser.seen('N')){
         long new_linenum = parser.value_long();
         #if DEBUG_GCODE
-            SER_SNPRINTF_COMMENT_PSTR("GCO: -> new_linenum: %d", new_linenum);
+            SER_SNPRINTF_COMMENT_PSTR("%s: -> new_linenum: %d", debug_prefix, new_linenum);
         #endif
         last_linenum = new_linenum;
     }
@@ -301,9 +380,85 @@ int gcode_M110(){
     return 0;
 }
 
+/**
+ * M500: Store settings in EEPROM
+ */
+inline void gcode_M500() {
+	(void)settings.save();
+}
+
+/**
+ * M501: Read settings from EEPROM
+ */
+inline void gcode_M501() {
+	(void)settings.load();
+}
+
+/**
+ * M502: Revert to default settings
+ */
+inline void gcode_M502() {
+	(void)settings.reset();
+}
+
+#if !DISABLE_M503
+/**
+ * M503: print settings currently in memory
+ */
+inline void gcode_M503() {
+	(void)settings.report(parser.seen('S') && !parser.value_bool());
+}
+#endif
+
+/**
+ * GCode P2205
+ * Get Unique Controller ID
+ */
+inline void gcode_P2205() {
+    SNPRINTF_MSG_PSTR("S%d", controller_id);
+    if(parser.linenum > 0){
+        print_line_response(parser.linenum, msg_buffer);
+    } else {
+        SERIAL_OBJ.println(msg_buffer);
+    }
+}
+
+/**
+ * GCode M2205
+ * Set Unique Controller ID
+ */
+int gcode_M2205() {
+    const char *debug_prefix = "GCO";
+    if(parser.seen('S')){
+        int new_controller_id = parser.value_int();
+        #if DEBUG_GCODE
+            SER_SNPRINTF_COMMENT_PSTR("%s: -> new_controller_id: %d", debug_prefix, new_controller_id);
+        #endif
+        controller_id = new_controller_id;
+    }
+    return 0;
+}
+
+/**
+ * GCode P2206
+ * Get Global Brightness
+ */
+int gcode_P2206() {
+    return 0;
+}
+
+/**
+ * GCode M2205
+ * Set Global Brightness
+ */
+int gcode_M2206() {
+    return 0;
+}
+
 int gcode_M9999() {
+    const char* debug_prefix = "GCO_M9999";
     #if DEBUG_GCODE
-        SER_SNPRINTF_COMMENT_PSTR("GCO: Calling M%d", parser.codenum);
+        SER_SNPRINTF_COMMENT_PSTR("%s: Calling M%d", debug_prefix, parser.codenum);
     #endif
 
     sw_reset();
@@ -325,6 +480,20 @@ int process_parsed_command() {
         {
         case 110:
             return gcode_M110();
+        case 500:
+            gcode_M500(); return 0;
+        case 501:
+            gcode_M501(); return 0;
+        case 502:
+            gcode_M502(); return 0;
+        case 503:
+            gcode_M503(); return 0;
+        case 508:
+            return gcode_M508();
+        case 509:
+            return gcode_M509();
+        case 2205:
+            return gcode_M2205();
         case 2600:
         case 2601:
         case 2602:
@@ -340,6 +509,8 @@ int process_parsed_command() {
     case 'P':
         switch (parser.codenum)
         {
+        case 2205:
+            gcode_P2205(); return 0;
         default:
             return parser.unknown_command_error();
         }
@@ -403,23 +574,23 @@ void process_next_command()
 void setup()
 {
     // initialize serial
-    #if DEBUG
-        blink();
-    #endif
+    // TODO: move this to serial.cpp
     SERIAL_OBJ.begin(SERIAL_BAUD);
+
+    // Load data from EEPROM if available (or use defaults)
+	// This also updates variables in the planner, elsewhere
+	(void)settings.load();
+
+    // TODO: move this to settings.report
 
     SER_SNPRINTF_MSG("\n");
     #if DEBUG
         SER_SNPRINTF_COMMENT_PSTR("SET: detected board: %s", DETECTED_BOARD);
         SER_SNPRINTF_COMMENT_PSTR("SET: sram size: %d", SRAM_SIZE);
         SER_SNPRINTF_COMMENT_PSTR("SET: Free SRAM %d", getFreeSram());
-        // SER_SNPRINTF_COMMENT_PSTR("SET: Debug flag: %d", DEBUG);
-        // SER_SNPRINTF_COMMENT_PSTR("SET: Debug Panel flag: %d", DEBUG_PANEL);
-        // SER_SNPRINTF_COMMENT_PSTR("SET: Debug loop flag: %d", DEBUG_LOOP);
+        // TODO: convert these to settings
         SER_SNPRINTF_COMMENT_PSTR("SET: MAX_QUEUE_LEN: %d", MAX_QUEUE_LEN);
         SER_SNPRINTF_COMMENT_PSTR("SET: MAX_CMD_SIZE: %d", MAX_CMD_SIZE);
-        // SER_SNPRINTF_COMMENT_PSTR("SET: this_linenum: %d", this_linenum);
-        // SER_SNPRINTF_COMMENT_PSTR("SET: last_linenum: %d", last_linenum);
     #endif
 
     // Clear out buffer
@@ -432,7 +603,7 @@ void setup()
     {
         if (pixel_count <= 0)
         {
-            error_code = 01;
+            error_code = 05;
             SNPRINTF_MSG_PSTR("SET: pixel_count is %d. No pixels defined. Exiting", pixel_count);
             stop();
         }
