@@ -664,7 +664,7 @@ void loop()
 
     if(RAINBOWS_UNTIL_GCODE && commands_processed == 0){
         int hue = 0;
-        for (int i = 0; i < 255; i+=10)
+        for (int i = 255; i > 0; i-=1)
         {
             for (int p = 0; p < panel_count; p++)
             {
