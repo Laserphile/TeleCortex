@@ -77,7 +77,7 @@ void TeleCortexSettings::read_data(int &pos, uint8_t* value, uint16_t size, uint
 */
 #if EEPROM_SETTINGS
 bool TeleCortexSettings::save() {
-    char ver[4] = "000";
+    char ver[4] = "V00";
 
     uint16_t working_crc = 0;
 
