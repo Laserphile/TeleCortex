@@ -140,12 +140,18 @@ int set_panel_pixel_RGB(int panel, int pixel, char * pixel_data){
             pixel, panel,
             (uint8_t)pixel_data[0], (uint8_t)pixel_data[1], (uint8_t)pixel_data[2]
         );
-    #endif
+    #endif // DEBUG_PANEL
     #if ENABLE_GAMMA_CORRECTION
-    pixel_data[0] = pgm_read_byte(&gammaR[(uint8_t)(pixel_data[0])]);
-    pixel_data[1] = pgm_read_byte(&gammaG[(uint8_t)(pixel_data[1])]);
-    pixel_data[2] = pgm_read_byte(&gammaB[(uint8_t)(pixel_data[2])]);
-    #endif
+        pixel_data[0] = pgm_read_byte(&gammaR[(uint8_t)(pixel_data[0])]);
+        pixel_data[1] = pgm_read_byte(&gammaG[(uint8_t)(pixel_data[1])]);
+        pixel_data[2] = pgm_read_byte(&gammaB[(uint8_t)(pixel_data[2])]);
+        #if DEBUG_PANEL
+            SER_SNPRINTF_COMMENT_PSTR(
+                "PIX: after gamma correction, RGB 0x%02x%02x%02x",
+                (uint8_t)pixel_data[0], (uint8_t)pixel_data[1], (uint8_t)pixel_data[2]
+            );
+        #endif // DEBUG_PANEL
+    #endif // ENABLE_GAMMA_CORRECTION
     panels[panel][pixel].setRGB(
         (uint8_t)pixel_data[0],
         (uint8_t)pixel_data[1],

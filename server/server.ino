@@ -628,6 +628,10 @@ void setup()
         }
     #endif
 
+    #if DEBUG
+        SER_SNPRINTF_COMMENT_PSTR("SET: Free SRAM %d", getFreeSram());
+    #endif
+
     error_code = init_queue();
     if (error_code)
     {
@@ -662,6 +666,10 @@ void loop()
         stopwatch_start_0();
     #endif
 
+    char panel_pixel_data[] = "HSV";
+    panel_pixel_data[1] = (char)(255);
+    panel_pixel_data[2] = (char)(255);
+
     if(RAINBOWS_UNTIL_GCODE && commands_processed == 0){
         int hue = 0;
         for (int i = 255; i > 0; i-=1)
@@ -671,7 +679,9 @@ void loop()
                 for (int j = 0; j < panel_info[p]; j++)
                 {
                     hue = (int)(255 * (1.0 + (float)j / (float)panel_info[p]) + i) % 255;
-                    panels[p][j].setHSV(hue, 255, 255);
+                    panel_pixel_data[0] = (char)(hue);
+                    set_panel_pixel_HSV(p, j, panel_pixel_data);
+                    // panels[p][j].setHSV(hue, 255, 255);
                     pixels_set ++;
                 }
             }
