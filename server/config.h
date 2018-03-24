@@ -24,7 +24,7 @@
 #define MAX_BRIGHTNESS 85
 #define EEPROM_SETTINGS 1
 
-#define APA_DATA_RATE 5
+#define APA_DATA_RATE 1
 
 // Maximum command length
 #define MAX_CMD_SIZE 260
@@ -51,3 +51,4 @@
 #include "board_properties.h"
 
 #endif /* __CONFIG_H__ */
+
