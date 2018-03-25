@@ -1,7 +1,7 @@
 #ifndef __PANEL_H__
 #define __PANEL_H__
 
-#include <Arduino.h>
+#include "server.h"
 #include <FastLED.h>
 
 #include "debug.h"

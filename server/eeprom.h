@@ -1,6 +1,6 @@
 #ifndef __EEPROM_H__
 #define __EEPROM_H__
-#include <Arduino.h>
+#include "server.h"
 #include <EEPROM.h>
 
 #define EEPROM_VERSION "V01"

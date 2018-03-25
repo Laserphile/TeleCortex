@@ -1,7 +1,7 @@
 #ifndef __SETTINGS_H__
 #define __SETTINGS_H__
 
-#include <Arduino.h>
+#include "server.h"
 #include "config.h"
 #include "macros.h"
 

@@ -1,7 +1,7 @@
 #ifndef __GCODE_H__
 #define __GCODE_H__
 
-#include <Arduino.h>
+#include "server.h"
 
 #include "config.h"
 #include "types.h"

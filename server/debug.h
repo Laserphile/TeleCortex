@@ -1,7 +1,7 @@
 #ifndef __DEBUG_H__
 #define __DEBUG_H__
 
-#include <Arduino.h>
+#include "server.h"
 #include "config.h"
 
 #ifndef DEBUG

@@ -1,7 +1,7 @@
 #ifndef __SERIAL_H__
 #define __SERIAL_H__
 
-#include <Arduino.h>
+#include "server.h"
 
 // Length of various buffer
 #define BUFFLEN_MSG 300

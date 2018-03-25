@@ -1,8 +1,7 @@
-#include <Arduino.h>
+#include "server.h"
+
 #include <TimeLib.h>
 #include <FastLED.h>
-
-#include "server.h"
 
 #include "config.h"
 #include "settings.h"

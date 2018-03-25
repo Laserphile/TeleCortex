@@ -1,5 +1,3 @@
-#include <Arduino.h>
-
 #include "debug.h"
 #include "serial.h"
 #include "config.h"

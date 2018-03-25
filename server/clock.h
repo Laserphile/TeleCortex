@@ -1,7 +1,7 @@
 #ifndef __CLOCK_H__
 #define __CLOCK_H__
 
-#include <Arduino.h>
+#include "server.h"
 #include <TimeLib.h>
 
 extern unsigned long last_loop_debug;

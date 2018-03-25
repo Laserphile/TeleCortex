@@ -11,7 +11,7 @@
 #ifndef __QUEUE_H__
 #define __QUEUE_H__
 
-#include <Arduino.h>
+#include "server.h"
 #include "types.h"
 #include "config.h"
 
