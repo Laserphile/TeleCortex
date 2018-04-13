@@ -1,10 +1,10 @@
 #include "b64.h"
 
-#include <avr/pgmspace.h>
+const char b64_alphabet[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                            "abcdefghijklmnopqrstuvwxyz"
+                            "0123456789+/";
 
-const char PROGMEM b64_alphabet[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-                                    "abcdefghijklmnopqrstuvwxyz"
-                                    "0123456789+/";
+// TODO: make b64_alphabet progmem again
 
 /* 'Private' declarations */
 inline void a3_to_a4(unsigned char *a4, unsigned char *a3);
@@ -27,7 +27,7 @@ int base64_encode(char *output, char *input, int input_len)
 
             for (i = 0; i < 4; i++)
             {
-                output[enc_len++] = pgm_read_byte(&b64_alphabet[a4[i]]);
+                output[enc_len++] = b64_alphabet[a4[i]];
             }
 
             i = 0;
@@ -45,7 +45,7 @@ int base64_encode(char *output, char *input, int input_len)
 
         for (j = 0; j < i + 1; j++)
         {
-            output[enc_len++] = pgm_read_byte(&b64_alphabet[a4[j]]);
+            output[enc_len++] = b64_alphabet[a4[j]];
         }
 
         while ((i++ < 3))
