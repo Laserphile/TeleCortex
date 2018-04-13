@@ -18,6 +18,23 @@
     #define PANEL_03_LEN 260
     #define MAX_PANELS 4
     #define STATUS_PIN 13
+#elif defined(ARDUINO_ESP32_DEV)  // Derwent Rainbow Goggles on ESP32
+    #define PANEL_TYPE NEOPIXEL
+    #define NEEDS_CLK 0
+    #define PANEL_00_DATA_PIN 34
+    #define PANEL_00_CLK_PIN 0
+    #define PANEL_00_LEN 32
+    #define PANEL_01_DATA_PIN 0
+    #define PANEL_01_CLK_PIN 0
+    #define PANEL_01_LEN 0
+    #define PANEL_02_DATA_PIN 0
+    #define PANEL_02_CLK_PIN 0
+    #define PANEL_02_LEN 0
+    #define PANEL_03_DATA_PIN 0
+    #define PANEL_03_CLK_PIN 0
+    #define PANEL_03_LEN 0
+    #define MAX_PANELS 1
+    #define STATUS_PIN 5
 #else // Matt's Live Setup on Teensy 3.2
     #define PANEL_TYPE APA102
     #define NEEDS_CLK 1
