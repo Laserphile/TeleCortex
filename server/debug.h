@@ -23,6 +23,8 @@
 #ifdef __arm__
     // should use uinstd.h to define sbrk but Due causes a conflict
     extern "C" char* sbrk(int incr);
+#elif defined(ESP_PLATFORM)
+    // TODO: this
 #else
     extern char __bss_end;
     extern char __heap_start;

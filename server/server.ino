@@ -36,14 +36,9 @@ long last_parsed_linenum;
 #endif
 
 void sw_reset(){
-    #if defined(__MK20DX128__) || defined(__MK20DX256__)
-        init_clock();
-        init_queue();
-        reinit_panels();
-    #else
-        // Restarts program from beginning but does not reset the peripherals and registers
-        asm volatile ("  jmp 0");
-    #endif
+    init_clock();
+    init_queue();
+    reinit_panels();
 }
 
 /**

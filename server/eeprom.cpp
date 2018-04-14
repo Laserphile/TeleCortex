@@ -46,7 +46,7 @@ void write_eeprom_code(const char * code, int offset){
             write_address, *code_write
         );
         #endif
-        EEPROM.update(write_address, *code_write);
+        EEPROM_OBJ_UPDATE(write_address, *code_write);
         code_write++;
         write_address++;
     }
@@ -90,7 +90,6 @@ void dump_eeprom_code() {
 
 bool eeprom_code_available() {
     return (eeprom_magic_present() && (EEPROM_CODE_START + eeprom_code_index < EEPROM_CODE_END));
-
 }
 
 char eeprom_code_read() {

@@ -39,10 +39,10 @@ extern TeleCortexSettings settings;
 
 
 #ifdef EEPROM_SETTINGS
-    #define EEPROM_START() int eeprom_index = EEPROM_OFFSET
-    #define EEPROM_SKIP(VAR) eeprom_index += sizeof(VAR)
-    #define EEPROM_WRITE(VAR) write_data(eeprom_index, (uint8_t*)&VAR, sizeof(VAR), &working_crc)
-    #define EEPROM_READ(VAR) read_data(eeprom_index, (uint8_t*)&VAR, sizeof(VAR), &working_crc)
+    #define EEPROM_SETTINGS_START() int eeprom_index = EEPROM_OFFSET
+    #define EEPROM_SETTINGS_SKIP(VAR) eeprom_index += sizeof(VAR)
+    #define EEPROM_SETTINGS_WRITE(VAR) write_data(eeprom_index, (uint8_t*)&VAR, sizeof(VAR), &working_crc)
+    #define EEPROM_SETTINGS_READ(VAR) read_data(eeprom_index, (uint8_t*)&VAR, sizeof(VAR), &working_crc)
 #endif
 
 //TODO: move this to server.h

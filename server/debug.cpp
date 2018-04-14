@@ -14,10 +14,13 @@ int error_code = 0;
 // Full credit goes to William Greiman.
 int getFreeSram()
 {
-    char top;
     #ifdef __arm__
+        char top;
         return &top - reinterpret_cast<char*>(sbrk(0));
+    #elif defined(ESP_PLATFORM)
+        return 0;
     #else  // __arm__
+        char top;
         return __brkval ? &top - __brkval : &top - &__bss_end;
     #endif  // __arm__
 };

@@ -21,6 +21,30 @@
 #define EEPROM_CODE_START (EEPROM.length() / 2)
 #define EEPROM_CODE_END EEPROM.length()
 
+#if defined(ESP_PLATFORM)
+#define EEPROM_OBJ_UPDATE(address, value) \
+    // TODO this
+#else
+#define EEPROM_OBJ_UPDATE(address, value) \
+    EEPROM.update(address, value)
+#endif
+
+#if defined(ESP_PLATFORM)
+#define EEPROM_OBJ_WRITE(address, value) \
+    // TODO this
+#else
+#define EEPROM_OBJ_WRITE(address, value) \
+    EEPROM.write(address, value)
+#endif
+
+#if defined(ESP_PLATFORM)
+#define EEPROM_OBJ_READ(address) \
+    0 // TODO this
+#else
+#define EEPROM_OBJ_READ(address) \
+    EEPROM.read(address)
+#endif
+
 /* Determine if EEPROM has been correctly initialized */
 bool eeprom_magic_present();
 void write_eeprom_code(const char * code, int offset);

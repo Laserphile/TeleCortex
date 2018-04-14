@@ -41,13 +41,12 @@ const char version[4] = EEPROM_VERSION;
 void TeleCortexSettings::write_data(int &pos, const uint8_t *value, uint16_t size, uint16_t *crc) {
     if (eeprom_error) return;
     while (size--) {
-        uint8_t * const p = (uint8_t * const)pos;
         uint8_t v = *value;
         // EEPROM has only ~100,000 write cycles,
         // so only write bytes that have changed!
-        if (v != eeprom_read_byte(p)) {
-            eeprom_write_byte(p, v);
-            if (eeprom_read_byte(p) != v) {
+        if (v != EEPROM_OBJ_READ(pos)) {
+            EEPROM_OBJ_WRITE(pos, v);
+            if (EEPROM_OBJ_READ(pos) != v) {
                 STRNCPY_MSG_PSTR("Error writing to EEPROM!");
                 print_error(03, msg_buffer);
                 eeprom_error = true;
@@ -64,7 +63,7 @@ void TeleCortexSettings::write_data(int &pos, const uint8_t *value, uint16_t siz
 void TeleCortexSettings::read_data(int &pos, uint8_t* value, uint16_t size, uint16_t *crc) {
     if (eeprom_error) return;
     do {
-        uint8_t c = eeprom_read_byte((unsigned char*)pos);
+        uint8_t c = EEPROM_OBJ_READ(pos);
         *value = c;
         crc16(crc, &c, 1);
         pos++;
@@ -81,17 +80,17 @@ bool TeleCortexSettings::save() {
 
     uint16_t working_crc = 0;
 
-    EEPROM_START();
+    EEPROM_SETTINGS_START();
 
     eeprom_error = false;
 
-    EEPROM_WRITE(ver);     // invalidate data first
-    EEPROM_SKIP(working_crc); // Skip the checksum slot
+    EEPROM_SETTINGS_WRITE(ver);     // invalidate data first
+    EEPROM_SETTINGS_SKIP(working_crc); // Skip the checksum slot
 
     working_crc = 0; // clear before first "real data"
 
     // TODO: complete this
-    EEPROM_WRITE(controller_id);
+    EEPROM_SETTINGS_WRITE(controller_id);
 
     if (!eeprom_error) {
         const int eeprom_size = eeprom_index;
@@ -101,8 +100,8 @@ bool TeleCortexSettings::save() {
         // Write the EEPROM header
         eeprom_index = EEPROM_OFFSET;
 
-        EEPROM_WRITE(version);
-        EEPROM_WRITE(final_crc);
+        EEPROM_SETTINGS_WRITE(version);
+        EEPROM_SETTINGS_WRITE(final_crc);
 
         // Report storage size
         #if EEPROM_DEBUG
@@ -132,13 +131,13 @@ bool TeleCortexSettings::save() {
 bool TeleCortexSettings::load() {
     uint16_t working_crc = 0;
 
-    EEPROM_START();
+    EEPROM_SETTINGS_START();
 
     char stored_ver[4];
-    EEPROM_READ(stored_ver);
+    EEPROM_SETTINGS_READ(stored_ver);
 
     uint16_t stored_crc;
-    EEPROM_READ(stored_crc);
+    EEPROM_SETTINGS_READ(stored_crc);
 
 
     // Version has to match or defaults are used
@@ -158,7 +157,7 @@ bool TeleCortexSettings::load() {
         #endif
         reset();
     } else {
-        EEPROM_READ(controller_id);
+        EEPROM_SETTINGS_READ(controller_id);
 
         // TODO: this
     }
