@@ -1,5 +1,8 @@
 # TeleCortex
 Arduino firmware for receiving TeleCortex messages which communicate LED data via GCode-like serial commands
+
+![TeleCortex TimeCrime DJing](https://raw.githubusercontent.com/Laserphile/TeleCortex/master/telecortex-timecrime-djing.gif)
+
 ## The protocol
 
 Based on GCode, with a sprinkling of ethernet.
