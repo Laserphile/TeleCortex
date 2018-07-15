@@ -277,6 +277,5 @@ Parameters:
 * Q = Panel number (int)
 
 ## More information
-[Blog posts](http://blog.laserphile.com/search/label/Cortex)
-[The protocol]()
-[Python client](https://github.com/Laserphile/Python-TeleCortex)
+- [Blog posts](http://blog.laserphile.com/search/label/Cortex)
+- [Python client](https://github.com/Laserphile/Python-TeleCortex)
