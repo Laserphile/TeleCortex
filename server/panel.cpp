@@ -118,7 +118,7 @@ int init_panels()
 
 
     // TODO: set this with GCode
-    FastLED.setBrightness(MAX_BRIGHTNESS);
+    // FastLED.setBrightness(MAX_BRIGHTNESS);
 
     return reinit_panels();
 }
@@ -139,6 +139,9 @@ int set_panel_pixel_RGB(int panel, int pixel, char * pixel_data){
             (uint8_t)pixel_data[0], (uint8_t)pixel_data[1], (uint8_t)pixel_data[2]
         );
     #endif // DEBUG_PANEL
+    // pixel_data[0] = (uint8_t)((float)(MAX_BRIGHTNESS) / 255.0 * (uint8_t)(pixel_data[0]));
+    // pixel_data[1] = (uint8_t)((float)(MAX_BRIGHTNESS) / 255.0 * (uint8_t)(pixel_data[1]));
+    // pixel_data[2] = (uint8_t)((float)(MAX_BRIGHTNESS) / 255.0 * (uint8_t)(pixel_data[2]));
     #if ENABLE_GAMMA_CORRECTION
         pixel_data[0] = pgm_read_byte(&gammaR[(uint8_t)(pixel_data[0])]);
         pixel_data[1] = pgm_read_byte(&gammaG[(uint8_t)(pixel_data[1])]);
@@ -167,6 +170,9 @@ int set_panel_pixel_HSV(int panel, int pixel, char * pixel_data){
             (uint8_t)pixel_data[0], (uint8_t)pixel_data[1], (uint8_t)pixel_data[2]
         );
     #endif
+    // pixel_data[0] = (uint8_t)((float)(MAX_BRIGHTNESS) / 255.0 * (uint8_t)(pixel_data[0]));
+    // pixel_data[1] = (uint8_t)((float)(MAX_BRIGHTNESS) / 255.0 * (uint8_t)(pixel_data[1]));
+    // pixel_data[2] = (uint8_t)((float)(MAX_BRIGHTNESS) / 255.0 * (uint8_t)(pixel_data[2]));
     panels[panel][pixel].setHSV(
         (uint8_t)pixel_data[0],
         (uint8_t)pixel_data[1],

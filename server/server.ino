@@ -1,6 +1,6 @@
 #include "server.h"
 
-// #include <TimeLib.h>
+#include <TimeLib.h>
 #include <FastLED.h>
 
 #include "config.h"
@@ -662,7 +662,7 @@ void loop()
 
     char panel_pixel_data[] = "HSV";
     panel_pixel_data[1] = (char)(255);
-    panel_pixel_data[2] = (char)(255);
+    panel_pixel_data[2] = (char)(64);
 
     if(RAINBOWS_UNTIL_GCODE && commands_processed == 0){
         int hue = 0;

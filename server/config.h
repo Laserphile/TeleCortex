@@ -21,7 +21,7 @@
 /* Display rainbows until receive GCode */
 #define RAINBOWS_UNTIL_GCODE 1
 #define ENABLE_GAMMA_CORRECTION 1
-#define MAX_BRIGHTNESS 85
+#define MAX_BRIGHTNESS 255.0
 #define EEPROM_SETTINGS 1
 
 #define APA_DATA_RATE 5

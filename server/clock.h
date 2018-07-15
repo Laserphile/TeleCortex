@@ -2,7 +2,7 @@
 #define __CLOCK_H__
 
 #include "server.h"
-// #include <TimeLib.h>
+#include <TimeLib.h>
 
 extern unsigned long last_loop_debug;
 extern unsigned long last_loop_idle;
