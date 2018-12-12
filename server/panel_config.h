@@ -21,7 +21,7 @@
 #elif defined(ARDUINO_ESP32_DEV)  // Derwent Rainbow Goggles on ESP32
     #define PANEL_TYPE NEOPIXEL
     #define NEEDS_CLK 0
-    #define PANEL_00_DATA_PIN 22
+    #define PANEL_00_DATA_PIN 18
     #define PANEL_00_CLK_PIN 0
     #define PANEL_00_LEN 32
     #define PANEL_01_DATA_PIN 0
