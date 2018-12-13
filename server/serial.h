@@ -90,4 +90,6 @@ extern char err_buffer[BUFFLEN_ERR];
     STRNCPY_PSTR(fmt_buffer, fmt_str, BUFFLEN_FMT); \
     SER_SNPRINTF_ERR(fmt_buffer, __VA_ARGS__);
 
+void init_serial();
+
 #endif /* __SERIAL_H__ */

@@ -573,9 +573,7 @@ void process_next_command()
  */
 void setup()
 {
-    // initialize serial
-    // TODO: move this to serial.cpp
-    SERIAL_OBJ.begin(SERIAL_BAUD);
+    init_serial();
 
     // Load data from EEPROM if available (or use defaults)
 	// This also updates variables in the planner, elsewhere
