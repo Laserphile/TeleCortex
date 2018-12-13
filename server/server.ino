@@ -138,8 +138,8 @@ void flush_serial_resend() {
 
     delay(FAIL_WAIT_PERIOD);
 
-    while(SERIAL_OBJ.available() > 0){
-        SERIAL_OBJ.read();
+    while(SERIAL_OBJ_IN.available() > 0){
+        SERIAL_OBJ_IN.read();
     }
 
     #if DEBUG_QUEUE
@@ -242,18 +242,18 @@ void get_serial_commands()
     static int serial_count = 0;
 
     #if DEBUG_SERIAL
-        if(SERIAL_OBJ.available() > 0){
+        if(SERIAL_OBJ_IN.available() > 0){
             SER_SNPRINTF_COMMENT_PSTR(
                 "%s: Serial available, serial_count: %d; buff strlen: %d; peek: 0x%02x",
-                debug_prefix, serial_count, strlen(serial_line_buffer), SERIAL_OBJ.peek()
+                debug_prefix, serial_count, strlen(serial_line_buffer), SERIAL_OBJ_IN.peek()
             );
         }
     #endif
 
-    while ((queue_length() < MAX_QUEUE_LEN) && (SERIAL_OBJ.available() > 0))
+    while ((queue_length() < MAX_QUEUE_LEN) && (SERIAL_OBJ_IN.available() > 0))
     {
         // The character currently being read from serial
-        char serial_char = SERIAL_OBJ.read();
+        char serial_char = SERIAL_OBJ_IN.read();
         if (IS_EOL(serial_char))
         {
             #if DEBUG_SERIAL

@@ -24,8 +24,10 @@ extern char fmt_buffer[BUFFLEN_MSG];
 // Buffer to store the error header
 extern char err_buffer[BUFFLEN_ERR];
 
+
 // Might use bluetooth Serial later.
 #define SERIAL_OBJ Serial
+#define SERIAL_OBJ_IN Serial
 
 // snprintf to output buffer
 #define SNPRINTF_MSG(...) \

@@ -13,4 +13,7 @@ char err_buffer[BUFFLEN_ERR];
 // initialize serial
 void init_serial() {
     SERIAL_OBJ.begin(SERIAL_BAUD);
+    if(SERIAL_OBJ_IN != SERIAL_OBJ) {
+        SERIAL_OBJ_IN.begin(SERIAL_BAUD);
+    }
 }
