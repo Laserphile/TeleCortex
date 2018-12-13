@@ -128,25 +128,27 @@ int GCodeParser::unknown_command_error()
 #if DEBUG_GCODE
 void GCodeParser::debug()
 {
-    SER_SNPRINTF_COMMENT_PSTR("PAD: Command: %s (%c %d)", command_ptr, command_letter, codenum);
+    const char * debug_prefix = "PAD";
+
+    SER_SNPRINTF_COMMENT_PSTR("%s: Command: %s (%c %d)", debug_prefix, command_ptr, command_letter, codenum);
     if(linenum >= 0){
-        SER_SNPRINTF_COMMENT_PSTR("PAD: LineNum: %d", linenum);
+        SER_SNPRINTF_COMMENT_PSTR("%s: LineNum: %d", debug_prefix, linenum);
     }
-    SER_SNPRINTF_COMMENT_PSTR("PAD: Args: %s", command_args);
+    SER_SNPRINTF_COMMENT_PSTR("%s: Args: %s", debug_prefix, command_args);
     for (char c = 'A'; c <= 'Z'; ++c)
     {
         if (seen(c))
         {
-            SER_SNPRINTF_COMMENT_PSTR("PAD: Code '%c'", c);
+            SER_SNPRINTF_COMMENT_PSTR("%s: Code '%c'", debug_prefix, c);
             if (has_value())
             {
                 SER_SNPRINT_COMMENT_PSTR( "PAD: (has value)");
                 if (arg_str_len) {
                     STRNCPY_PSTR(
-                        fmt_buffer, "%cPAD: ->    str (%d) : '%%n%%%ds'", BUFFLEN_FMT);
+                        fmt_buffer, "%c%s: ->    str (%d) : '%%n%%%ds'", BUFFLEN_FMT);
                     snprintf(
                         msg_buffer, BUFFLEN_FMT, fmt_buffer,
-                        COMMENT_PREFIX, arg_str_len, arg_str_len);
+                        COMMENT_PREFIX, debug_prefix, arg_str_len, arg_str_len);
                     strncpy(fmt_buffer, msg_buffer, BUFFLEN_FMT);
                     int msg_offset = 0;
                     snprintf(
@@ -157,23 +159,23 @@ void GCodeParser::debug()
                     SERIAL_OBJ.println(msg_buffer);
 
                     // snprintf(
-                    //     fmt_buffer, BUFFLEN_FMT, "%cPAD: ->    str (%d) : '%%%ds'",
-                    //     COMMENT_PREFIX, arg_str_len, arg_str_len);
+                    //     fmt_buffer, BUFFLEN_FMT, "%%s: ->    str (%d) : '%%%ds'",
+                    //     COMMENT_PREFIX, debug_prefix, arg_str_len, arg_str_len);
                     // snprintf(
                     //     msg_buffer, BUFFLEN_MSG, fmt_buffer, value_ptr
                     // );
                     // SERIAL_OBJ.println(msg_buffer);
                 }
                 // if(HAS_NUM(value_ptr)){
-                //     SER_SNPRINTF_COMMENT_PSTR("PAD: ->  float: %f", value_float());
-                //     SER_SNPRINTF_COMMENT_PSTR("PAD: ->   long: %d", value_long());
-                //     SER_SNPRINTF_COMMENT_PSTR("PAD: ->  ulong: %d", value_ulong());
-                //     // SER_SNPRINTF_COMMENT_PSTR("PAD: -> millis: %d", value_millis());
-                //     // SER_SNPRINTF_COMMENT_PSTR("PAD: -> sec-ms: %d", value_millis_from_seconds());
-                //     SER_SNPRINTF_COMMENT_PSTR("PAD: ->    int: %d", value_int());
-                //     SER_SNPRINTF_COMMENT_PSTR("PAD: -> ushort: %d", value_ushort());
-                //     SER_SNPRINTF_COMMENT_PSTR("PAD: ->   byte: %d", (int)value_byte());
-                //     SER_SNPRINTF_COMMENT_PSTR("PAD: ->   bool: %d", (int)value_bool());
+                //     SER_SNPRINTF_COMMENT_PSTR("%s: ->  float: %f", debug_prefix, value_float());
+                //     SER_SNPRINTF_COMMENT_PSTR("%s: ->   long: %d", debug_prefix, value_long());
+                //     SER_SNPRINTF_COMMENT_PSTR("%s: ->  ulong: %d", debug_prefix, value_ulong());
+                //     // SER_SNPRINTF_COMMENT_PSTR("%s: -> millis: %d", debug_prefix, value_millis());
+                //     // SER_SNPRINTF_COMMENT_PSTR("%s: -> sec-ms: %d", debug_prefix, value_millis_from_seconds());
+                //     SER_SNPRINTF_COMMENT_PSTR("%s: ->    int: %d", debug_prefix, value_int());
+                //     SER_SNPRINTF_COMMENT_PSTR("%s: -> ushort: %d", debug_prefix, value_ushort());
+                //     SER_SNPRINTF_COMMENT_PSTR("%s: ->   byte: %d", debug_prefix, (int)value_byte());
+                //     SER_SNPRINTF_COMMENT_PSTR("%s: ->   bool: %d", debug_prefix, (int)value_bool());
                 // }
             }
             else
@@ -400,6 +402,7 @@ int gcode_M260X()
                 msg_buffer + msg_offset, panel_payload,
                 MIN(BUFFLEN_MSG - msg_offset, panel_payload_len));
             SERIAL_OBJ.println(msg_buffer);
+            SERIAL_OBJ.flush();
         #endif
 
         // validate panel_payload is base64
@@ -453,36 +456,27 @@ int gcode_M260X()
     // Test with M2600 V
     if(panel_payload_len <= 0){
         SNPRINTF_MSG_PSTR(
-            "panel payload must not be empty",
-            NULL
+            "panel payload must not be empty", panel_payload_len
         );
         return 14;
     }
 
-    #if DEBUG_GCODE
-        char fake_panel[panel_len];
-        int dec_len = base64_decode(fake_panel, panel_payload, panel_payload_len);
-        STRNCPY_PSTR(
-            fmt_buffer, "%c%s: -> decoded payload: (%d) 0x", BUFFLEN_FMT);
-        snprintf(
-            msg_buffer, BUFFLEN_FMT, fmt_buffer,
-            COMMENT_PREFIX, debug_prefix, dec_len, dec_len * 2
-        );
-        strncpy(fmt_buffer, msg_buffer, BUFFLEN_FMT);
-        int offset_payload_start = snprintf(
-            msg_buffer, BUFFLEN_MSG, fmt_buffer
-        );
-        for(int i=0; i<dec_len; i++){
-            sprintf(
-                msg_buffer + offset_payload_start + i*2,
-                "%02x",
-                fake_panel[i]
-            );
-        }
-        SERIAL_OBJ.println(msg_buffer);
-    #endif
-
     char pixel_data[3];
+    int dec_len = (panel_payload_len * 3 / 4);
+
+    #if DEBUG_GCODE
+        if( panel_payload_gcode() ) {
+            SER_SNPRINTF_COMMENT_PSTR("%s: -> decoded payload: (%d) 0x", debug_prefix, dec_len);
+            for (int pixel = 0; pixel < (panel_payload_len / 4); pixel++)
+            {
+                // every 4 bytes of encoded base64 corresponds to a single RGB pixel
+                base64_decode(pixel_data, panel_payload + (pixel * 4), 4);
+                snprintf(msg_buffer, BUFFLEN_MSG, "%02X%02X%02X", pixel_data[0], pixel_data[1], pixel_data[2]);
+                SERIAL_OBJ.print(msg_buffer);
+            }
+            SERIAL_OBJ.println();
+        }
+    #endif
 
     if( panel_payload_gcode() ) {
         for (int pixel = 0; pixel < (panel_payload_len / 4); pixel++)
@@ -510,6 +504,9 @@ int gcode_M260X()
         }
     }
 
+    #if DEBUG_GCODE
+        SER_SNPRINTF_COMMENT_PSTR("%s: done", debug_prefix);
+    #endif
 
     return 0;
 }

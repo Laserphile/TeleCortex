@@ -92,13 +92,13 @@ void get_eeprom_commands() {
         }
         else if (eeprom_count >= MAX_CMD_SIZE - 1)
         {
-            // if (DEBUG_EEPROM) { SER_SNPRINTF_COMMENT_PSTR("GSC: serial count %d is larger than MAX_CMD_SIZE: %d, ignore", eeprom_count, MAX_CMD_SIZE); }
+            // if (DEBUG_EEPROM) { SER_SNPRINTF_COMMENT_PSTR("%s: serial count %d is larger than MAX_CMD_SIZE: %d, ignore", debug_prefix, eeprom_count, MAX_CMD_SIZE); }
             // Keep fetching, but ignore normal characters beyond the max length
             // The command will be injected when EOL is reached
         }
         else if (eeprom_char == ESCAPE_PREFIX)
         { // Handle escapes
-            // if (DEBUG_EEPROM) { SER_SNPRINT_COMMENT_PSTR("GSC: serial char is escape"); }
+            // if (DEBUG_EEPROM) { SER_SNPRINT_COMMENT_PSTR("GEC: serial char is escape"); }
             if (eeprom_code_available())
             {
                 // if we have one more character, copy it over
@@ -110,7 +110,7 @@ void get_eeprom_commands() {
         }
         else
         {
-            // if (DEBUG_QUEUE) { SER_SNPRINT_COMMENT_PSTR("GSC: serial char is regular"); }
+            // if (DEBUG_QUEUE) { SER_SNPRINT_COMMENT_PSTR("GEC: serial char is regular"); }
             // it's not a newline, carriage return or escape char
             if (eeprom_char == COMMENT_PREFIX)
                 eeprom_comment_mode = true;
@@ -466,7 +466,13 @@ int gcode_M9999() {
 }
 
 int process_parsed_command() {
-    // TODO: this
+    const char * debug_prefix = "PPC";
+
+    #if DEBUG
+        SER_SNPRINTF_COMMENT_PSTR("%s: Start: %c %d", debug_prefix, parser.command_letter, parser.codenum);
+        SERIAL_OBJ.flush();
+    #endif
+
     switch (parser.command_letter)
     {
     case 'G':
@@ -529,18 +535,31 @@ int process_parsed_command() {
  */
 void process_next_command()
 {
+    const char * debug_prefix = "PNC";
     char *const current_command = command_queue[cmd_queue_index_r];
+
+    #if DEBUG
+        SER_SNPRINTF_COMMENT_PSTR("%s: Start", debug_prefix);
+        SERIAL_OBJ.flush();
+    #endif
 
     #if DEBUG_TIMING
         stopwatch_start_2();
     #endif
     parser.parse(current_command);
+
+    #if DEBUG
+        SER_SNPRINTF_COMMENT_PSTR("%s: Parse", debug_prefix);
+        SERIAL_OBJ.flush();
+    #endif
+
     #if DEBUG_TIMING
         parse_cmd_time = stopwatch_stop_2();
     #endif
     #if DEBUG_GCODE
         parser.debug();
     #endif
+
     #if DEBUG_TIMING
         stopwatch_start_2();
     #endif
@@ -548,6 +567,12 @@ void process_next_command()
     #if DEBUG_TIMING
         process_parsed_cmd_time = stopwatch_stop_2();
     #endif
+
+    #if DEBUG
+        SER_SNPRINTF_COMMENT_PSTR("%s: Process Parsed", debug_prefix);
+        SERIAL_OBJ.flush();
+    #endif
+
     if(error_code != 0){
         if(parser.linenum >= 0){
             print_line_error(parser.linenum, error_code, msg_buffer);
@@ -576,6 +601,7 @@ void process_next_command()
 void setup()
 {
     init_serial();
+    const char * debug_prefix = "SET";
 
     // Load data from EEPROM if available (or use defaults)
 	// This also updates variables in the planner, elsewhere
@@ -585,12 +611,12 @@ void setup()
 
     SER_SNPRINTF_MSG("\n");
     #if DEBUG
-        SER_SNPRINTF_COMMENT_PSTR("SET: detected board: %s", DETECTED_BOARD);
-        SER_SNPRINTF_COMMENT_PSTR("SET: sram size: %d", SRAM_SIZE);
-        SER_SNPRINTF_COMMENT_PSTR("SET: Free SRAM %d", getFreeSram());
+        SER_SNPRINTF_COMMENT_PSTR("%s: detected board: %s", debug_prefix, DETECTED_BOARD);
+        SER_SNPRINTF_COMMENT_PSTR("%s: sram size: %d", debug_prefix, SRAM_SIZE);
+        SER_SNPRINTF_COMMENT_PSTR("%s: Free SRAM %d", debug_prefix, getFreeSram());
         // TODO: convert these to settings
-        SER_SNPRINTF_COMMENT_PSTR("SET: MAX_QUEUE_LEN: %d", MAX_QUEUE_LEN);
-        SER_SNPRINTF_COMMENT_PSTR("SET: MAX_CMD_SIZE: %d", MAX_CMD_SIZE);
+        SER_SNPRINTF_COMMENT_PSTR("%s: MAX_QUEUE_LEN: %d", debug_prefix, MAX_QUEUE_LEN);
+        SER_SNPRINTF_COMMENT_PSTR("%s: MAX_CMD_SIZE: %d", debug_prefix, MAX_CMD_SIZE);
     #endif
 
     // Clear out buffer
@@ -604,7 +630,7 @@ void setup()
         if (pixel_count <= 0)
         {
             error_code = 05;
-            SNPRINTF_MSG_PSTR("SET: pixel_count is %d. No pixels defined. Exiting", pixel_count);
+            SNPRINTF_MSG_PSTR("%s: pixel_count is %d. No pixels defined. Exiting", debug_prefix, pixel_count);
             stop();
         }
     }
@@ -621,10 +647,10 @@ void setup()
     }
 
     #if DEBUG
-        SER_SNPRINTF_COMMENT_PSTR("SET: pixel_count: %d, panel_count: %d", pixel_count, panel_count);
+        SER_SNPRINTF_COMMENT_PSTR("%s: pixel_count: %d, panel_count: %d", debug_prefix, pixel_count, panel_count);
         for (int p = 0; p < panel_count; p++)
         {
-            SER_SNPRINTF_COMMENT_PSTR("SET: -> panel %d len %d", p, panel_info[p]);
+            SER_SNPRINTF_COMMENT_PSTR("%s: -> panel %d len %d", p, debug_prefix, panel_info[p]);
         }
     #endif
 
@@ -662,7 +688,12 @@ void loop()
         stopwatch_start_0();
     #endif
 
-    if(RAINBOWS_UNTIL_GCODE && commands_processed == 0){
+    if(
+        (millis() - last_cmd_rx > 1000) && (
+            (RAINBOWS_UNTIL_GCODE && commands_processed == 0)
+            || RAINBOWS_ON_IDLE
+        )
+    ){
         int hue = 0;
         for (int i = 0; i < 255; i+=10)
         {
@@ -683,11 +714,11 @@ void loop()
 
     #if DEBUG_LOOP
         if (t_now - last_loop_debug > LOOP_DEBUG_PERIOD){
-            // SER_SNPRINTF_COMMENT_PSTR("LOO: Free SRAM %d", getFreeSram());
-            // SER_SNPRINTF_COMMENT_PSTR("LOO: Time elapsed %d", delta_started());
-            // SER_SNPRINTF_COMMENT_PSTR("LOO: Pixels set %d", pixels_set);
-            // SER_SNPRINTF_COMMENT_PSTR("LOO: get_cmd: %d us", get_cmd_time);
-            // SER_SNPRINTF_COMMENT_PSTR("LOO: process_cmd: %d us", get_cmd_time);
+            // SER_SNPRINTF_COMMENT_PSTR("%s: Free SRAM %d", debug_prefix, getFreeSram());
+            // SER_SNPRINTF_COMMENT_PSTR("%s: Time elapsed %d", debug_prefix, delta_started());
+            // SER_SNPRINTF_COMMENT_PSTR("%s: Pixels set %d", debug_prefix, pixels_set);
+            // SER_SNPRINTF_COMMENT_PSTR("%s: get_cmd: %d us", debug_prefix, get_cmd_time);
+            // SER_SNPRINTF_COMMENT_PSTR("%s: process_cmd: %d us", debug_prefix, get_cmd_time);
             if(!NEAR_ZERO(delta_started())){
                 int pixel_set_rate = int(1000.0 * pixels_set / delta_started());
                 int command_rate = int(1000.0 * commands_processed / delta_started());
@@ -717,6 +748,12 @@ void loop()
             );
         #endif
     }
+
+    // #if DEBUG_LOOP
+    //     SER_SNPRINTF_COMMENT_PSTR("%s: Q start timer", debug_prefix);
+    //     SERIAL_OBJ.flush();
+    // #endif
+
     if (queue_length()){
         #if DEBUG_TIMING
             SER_SNPRINTF_COMMENT_PSTR(
@@ -728,6 +765,12 @@ void loop()
             stopwatch_start_1();
         #endif
         process_next_command();
+
+        // #if DEBUG_LOOP
+        //     SER_SNPRINTF_COMMENT_PSTR("%s: Process Next Command", debug_prefix);
+        //     SERIAL_OBJ.flush();
+        // #endif
+
         #if DEBUG_TIMING
              process_cmd_time = stopwatch_stop_1();
              SER_SNPRINTF_COMMENT_PSTR(
@@ -737,6 +780,12 @@ void loop()
              );
         #endif
         queue_advance_read();
+
+        // #if DEBUG_LOOP
+        //     SER_SNPRINTF_COMMENT_PSTR("%s: Q Advance read", debug_prefix);
+        //     SERIAL_OBJ.flush();
+        // #endif
+
     } else {
         if(t_now - last_loop_idle > LOOP_IDLE_PERIOD){
             SER_SNPRINT_PSTR("IDLE");
@@ -751,6 +800,11 @@ void loop()
             debug_prefix, stopwatch_stop_0()
         );
     #endif
+
+    // #if DEBUG_LOOP
+    //     SER_SNPRINTF_COMMENT_PSTR("%s: Q Timer stop", debug_prefix);
+    //     SERIAL_OBJ.flush();
+    // #endif
 
     SERIAL_OBJ.flush();
 }

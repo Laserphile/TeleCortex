@@ -42,8 +42,12 @@ void print_line_response(int linenum, char* message) {
 }
 
 void print_line_ok(int linenum) {
-    SER_SNPRINTF_ERR_PSTR("N%d: OK", linenum);
-    SERIAL_OBJ.println();
+    #if REPLY_OK
+        SER_SNPRINTF_ERR_PSTR("N%d: OK", linenum);
+        SERIAL_OBJ.println();
+        SERIAL_OBJ.flush();
+        // SERIAL_OBJ.send_now('\n');
+    #endif
 }
 
 void blink()
