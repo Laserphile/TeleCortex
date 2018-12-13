@@ -466,7 +466,7 @@ int gcode_M260X()
             fmt_buffer, "%c%s: -> decoded payload: (%d) 0x", BUFFLEN_FMT);
         snprintf(
             msg_buffer, BUFFLEN_FMT, fmt_buffer,
-            debug_prefix, COMMENT_PREFIX, dec_len, dec_len * 2
+            COMMENT_PREFIX, debug_prefix, dec_len, dec_len * 2
         );
         strncpy(fmt_buffer, msg_buffer, BUFFLEN_FMT);
         int offset_payload_start = snprintf(
