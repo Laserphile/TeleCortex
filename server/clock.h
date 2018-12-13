@@ -6,6 +6,7 @@
 
 extern unsigned long last_loop_debug;
 extern unsigned long last_loop_idle;
+extern unsigned long last_cmd_rx;
 
 int init_clock();
 unsigned long delta_started();

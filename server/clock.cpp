@@ -4,6 +4,7 @@
 
 unsigned long last_loop_debug;
 unsigned long last_loop_idle;
+unsigned long last_cmd_rx;
 unsigned long t_started;
 unsigned long stopwatch_started_0;
 unsigned long stopwatch_started_1;
@@ -18,6 +19,7 @@ int init_clock() {
     #endif
     last_loop_debug = 0;
     last_loop_idle = 0;
+    last_cmd_rx = 0;
     return 0;
 }
 

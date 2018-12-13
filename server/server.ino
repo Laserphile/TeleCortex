@@ -722,6 +722,7 @@ void loop()
                 debug_prefix, last_linenum, command_queue[cmd_queue_index_r]
             );
             last_pixels_set = pixels_set;
+            last_cmd_rx = millis();
             stopwatch_start_1();
         #endif
         process_next_command();
