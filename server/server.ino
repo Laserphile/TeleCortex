@@ -486,8 +486,10 @@ int process_parsed_command() {
             gcode_M501(); return 0;
         case 502:
             gcode_M502(); return 0;
+        #if !DISABLE_M503
         case 503:
             gcode_M503(); return 0;
+        #endif
         case 508:
             return gcode_M508();
         case 509:
