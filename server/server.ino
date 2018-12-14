@@ -719,15 +719,19 @@ void loop()
             // SER_SNPRINTF_COMMENT_PSTR("%s: Pixels set %d", debug_prefix, pixels_set);
             // SER_SNPRINTF_COMMENT_PSTR("%s: get_cmd: %d us", debug_prefix, get_cmd_time);
             // SER_SNPRINTF_COMMENT_PSTR("%s: process_cmd: %d us", debug_prefix, get_cmd_time);
+            // SER_SNPRINTF_COMMENT_PSTR("%s: delta_started: %d us", debug_prefix, delta_started());
+            int pixel_set_rate = 0;
+            int command_rate = 0;
+            int fps = FastLED.getFPS();
             if(!NEAR_ZERO(delta_started())){
-                int pixel_set_rate = int(1000.0 * pixels_set / delta_started());
-                int command_rate = int(1000.0 * commands_processed / delta_started());
-                int fps = FastLED.getFPS();
-                SER_SNPRINTF_COMMENT_PSTR(
-                    "%s: FPS: %3d, CMD_RATE: %5d cps, PIX_RATE: %7d pps, QUEUE: %2d / %2d",
-                    debug_prefix, fps, command_rate, pixel_set_rate, queue_length(), MAX_QUEUE_LEN
-                );
+                pixel_set_rate = int(1000.0 * pixels_set / delta_started());
+                command_rate = int(1000.0 * commands_processed / delta_started());
             }
+            SER_SNPRINTF_COMMENT_PSTR(
+                "%s: FPS: %3d, CMD_RATE: %5d cps, PIX_RATE: %7d pps, QUEUE: %2d / %2d",
+                debug_prefix, fps, command_rate, pixel_set_rate, queue_length(), MAX_QUEUE_LEN
+            );
+            SERIAL_OBJ.flush();
             last_loop_debug = t_now;
             // last_loop_debug = 0;
         }
@@ -787,7 +791,10 @@ void loop()
         // #endif
 
     } else {
-        if(t_now - last_loop_idle > LOOP_IDLE_PERIOD){
+        if(
+            (t_now - last_loop_idle > LOOP_IDLE_PERIOD)
+            && (t_now - last_loop_debug > LOOP_IDLE_PERIOD / 2 )
+        ){
             SER_SNPRINT_PSTR("IDLE");
             last_loop_idle = t_now;
             idle_linenum = this_linenum;
